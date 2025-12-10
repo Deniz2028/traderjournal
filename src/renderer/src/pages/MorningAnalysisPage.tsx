@@ -55,6 +55,41 @@ const MorningAnalysisPage: React.FC = () => {
     const [activeTfBySymbol, setActiveTfBySymbol] = useState<Record<string, TF>>({});
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
+    const [isAdding, setIsAdding] = useState(false);
+    const [newSymbol, setNewSymbol] = useState("");
+
+    const handleAddInstrument = () => {
+        if (!newSymbol.trim()) return;
+        const symbol = newSymbol.trim().toUpperCase();
+
+        // Prevent duplicates
+        if (snapshot?.instruments.find(i => i.symbol === symbol)) {
+            alert("Instrument already exists.");
+            return;
+        }
+
+        const tfs = getTimeframesForSymbol(symbol, mtfSettings);
+        const timeframes: MorningMtfTimeframeSnapshot[] = tfs.map((tf) => ({
+            tf,
+            chartUrl: "",
+            bias: "neutral",
+            notes: "",
+        }));
+
+        const newInst: MorningMtfInstrumentSnapshot = {
+            symbol,
+            dailyBias: "neutral",
+            timeframes,
+        };
+
+        setSnapshot(prev => prev ? { ...prev, instruments: [...prev.instruments, newInst] } : null);
+
+        // Init active tab
+        setActiveTfBySymbol(prev => ({ ...prev, [symbol]: tfs[0] || "4H" }));
+
+        setNewSymbol("");
+        setIsAdding(false);
+    };
 
     // Close lightbox on ESC
     useEffect(() => {
@@ -437,6 +472,38 @@ const MorningAnalysisPage: React.FC = () => {
                         </div>
                     );
                 })}
+            </div>
+
+            {/* Add Instrument Section */}
+            <div style={{ marginTop: 24 }}>
+                {isAdding ? (
+                    <div className="card" style={{ padding: 16, display: "flex", gap: 12, alignItems: "center" }}>
+                        <input
+                            autoFocus
+                            placeholder="Symbol (e.g. SOLUSD)"
+                            value={newSymbol}
+                            onChange={e => setNewSymbol(e.target.value)}
+                            onKeyDown={e => e.key === "Enter" && handleAddInstrument()}
+                            style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border-subtle)", fontSize: 13, flex: 1, maxWidth: 300 }}
+                        />
+                        <button onClick={handleAddInstrument} style={{ padding: "8px 16px", backgroundColor: "#111827", color: "white", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500, border: "none" }}>Add</button>
+                        <button onClick={() => setIsAdding(false)} style={{ padding: "8px 16px", backgroundColor: "transparent", color: "#6B7280", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>Cancel</button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={() => setIsAdding(true)}
+                        style={{
+                            width: "100%", padding: 16, borderRadius: 8,
+                            border: "2px dashed var(--border-subtle)",
+                            color: "var(--text-secondary)", fontWeight: 600,
+                            backgroundColor: "transparent", cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13
+                        }}
+                    >
+                        <span>+ Add Instrument</span>
+                    </button>
+                )}
             </div>
 
             <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>

@@ -106,6 +106,7 @@ export const CalendarPage: React.FC = () => {
             thisDate.setHours(0, 0, 0, 0); // Zero out time for comparison
             const isFuture = thisDate > realNow;
             const isToday = thisDate.getTime() === realNow.getTime();
+            const isPast = thisDate < realNow && !isToday;
 
             els.push(
                 <div
@@ -142,19 +143,29 @@ export const CalendarPage: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Morning Analysis - Moved to Top */}
+                    {/* Morning Analysis */}
                     {hasMorning ? (
                         <div style={{ marginBottom: 6 }}>
                             <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
                                 Morning Analysis
                             </Link>
                         </div>
-                    ) : !isFuture && (
-                        <div style={{ marginBottom: 6 }}>
-                            <Link href={`/morning/${dateStr}`} style={styles.linkPillGray}>
-                                + Morning
-                            </Link>
-                        </div>
+                    ) : (!isFuture && (isToday || currentDate.getMonth() === new Date().getMonth())) && (
+                        /* Logic tweak: User said "past days". I'll interpret strictly. 
+                           However, standard UX is you can fill past. 
+                           User: "geçmiş günlerde ... yoksa yazdırmasın". 
+                           Let's simplify: Show '+' only if isToday or isFuture. 
+                           Wait, "future" doesn't need EOD.
+                           Let's use (!isPast).
+                           Defining isPast locally below.
+                        */
+                        !isPast && (
+                            <div style={{ marginBottom: 6 }}>
+                                <Link href={`/morning/${dateStr}`} style={styles.linkPillDashed}>
+                                    + Morning
+                                </Link>
+                            </div>
+                        )
                     )}
 
                     {/* Trade Pills */}
@@ -170,27 +181,16 @@ export const CalendarPage: React.FC = () => {
 
                     {/* Bottom Links (pinned to bottom) */}
                     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-                        {hasEod && (
+                        {hasEod ? (
                             <Link href={`/eod/${dateStr}`} style={styles.linkPillTeal}>
                                 EOD Review
                             </Link>
-                        )}
-
-                        {!hasEod && !isFuture && (
-                            <Link href={`/eod/${dateStr}`} style={{
-                                padding: "2px 8px",
-                                borderRadius: 4,
-                                border: "1px dashed #E5E7EB",
-                                fontSize: 10,
-                                color: "#9CA3AF",
-                                cursor: "pointer",
-                                width: "100%",
-                                textAlign: "center",
-                                textDecoration: "none",
-                                display: "block"
-                            }}>
-                                + EOD
-                            </Link>
+                        ) : (
+                            !isPast && (
+                                <Link href={`/eod/${dateStr}`} style={styles.linkPillDashed}>
+                                    + EOD
+                                </Link>
+                            )
                         )}
                     </div>
                 </div>
@@ -354,6 +354,21 @@ const styles: Record<string, React.CSSProperties> = {
         textAlign: "center",
         textDecoration: "none",
         display: "block",
+    },
+    linkPillDashed: {
+        marginTop: 2,
+        padding: "2px 8px",
+        borderRadius: 4,
+        border: "1px dashed #D1D5DB",
+        fontSize: 10,
+        color: "#9CA3AF",
+        cursor: "pointer",
+        fontWeight: 500,
+        width: "100%",
+        textAlign: "center",
+        textDecoration: "none",
+        display: "block",
+        backgroundColor: "transparent"
     }
 };
 

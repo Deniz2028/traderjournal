@@ -1,6 +1,6 @@
 {
   "name": "trade-journal",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "A Trade Journal Application",
   "main": "./out/main/index.js",
   "author": "example.com",
