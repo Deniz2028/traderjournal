@@ -19,6 +19,10 @@ export interface EODApi {
     getForMonth(yyyyMM: string): Promise<EODReview[]>;
 }
 
+export interface NewsApi {
+    getThisWeek(): Promise<import("./types/news").FxNewsItem[]>;
+}
+
 export interface Api {
     trades: {
         getForMonth(year: number, month: number): Promise<Trade[]>;
@@ -27,6 +31,7 @@ export interface Api {
     };
     morningMtf: MorningMtfApi;
     eodApi: EODApi;
+    news: NewsApi;
 }
 
 declare global {

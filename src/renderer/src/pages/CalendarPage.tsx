@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { getTrades, getTradesForMonth } from "../utils/tradeStorage";
+// Removed legacy tradeStorage import to fix "ghost trades"
+import { getMonthlySummary, MtfTrade } from "../utils/journalStorage";
 import { fetchMorningForMonth } from "../utils/morningMtfClient";
 import { fetchEodForMonth } from "../utils/eodClient";
 import { getDaysInMonth, getMonthName } from "../utils/dateUtils";
-import { getAppToday } from "../utils/appDate";
-import type { Trade } from "../types";
+import { getAppToday, setAppToday } from "../utils/appDate";
 import type { EODReview } from "../../../shared/eodTypes";
 
 export const CalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [trades, setTrades] = useState<Trade[]>([]);
+    // Map of date -> journal summary
+    const [journalMap, setJournalMap] = useState<Record<string, { count: number; netR: number; trades: MtfTrade[] }>>({});
     const [morningDates, setMorningDates] = useState<string[]>([]);
     const [eodMap, setEodMap] = useState<Record<string, EODReview>>({});
-    // location unused
+    const [_location, setLocation] = useLocation();
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth(); // 0-indexed
@@ -24,9 +25,9 @@ export const CalendarPage: React.FC = () => {
 
     const loadData = async () => {
         try {
-            // Trades
-            const mTrades = await getTradesForMonth(year, month);
-            setTrades(mTrades);
+            // New: Get data from actual Journal Storage
+            const summary = getMonthlySummary(year, month);
+            setJournalMap(summary);
 
             // Morning
             const snapshots = await fetchMorningForMonth(year, month);
@@ -55,20 +56,23 @@ export const CalendarPage: React.FC = () => {
     };
 
     const handleToday = () => {
+        setAppToday(null); // Clear simulation, go to real today
         setCurrentDate(new Date());
+    };
+
+    const handleDayClick = (dateStr: string) => {
+        setAppToday(dateStr);
+        setLocation("/today");
     };
 
     const renderDays = () => {
         const daysInMonth = getDaysInMonth(year, month);
         const firstDayOfMonth = new Date(year, month, 1).getDay();
-        // Adjust for Monday start if desired, but let's stick to Sun=0 for now or whatever dateUtils/standard JS does.
-        // If we want Mon=0, we need to shift. 
-        // Standard US calendar: Sun=0.
 
-        // Let's align with "Mon, Tue, Wed..." header usually. 
-        // If header is Mon-Sun, handle offset.
-        // Let's assume Mon-Sun for trading.
-        const startOffset = (firstDayOfMonth + 6) % 7; // Mon=0, Sun=6
+        // Start offset (Mon=0 via simple math trick if Mon is start, 
+        // but let's stick to standard Sun=0 first col for consistency unless requested otherwise)
+        // If Mon is first col: (day + 6) % 7
+        const startOffset = (firstDayOfMonth + 6) % 7;
 
         const els: JSX.Element[] = [];
 
@@ -77,103 +81,102 @@ export const CalendarPage: React.FC = () => {
             els.push(<div key={`empty-${i}`} style={styles.dayCellEmpty} />);
         }
 
+        // Real "Today" for future check
+        const realNow = new Date();
+        // Zero out time for clean comparison
+        realNow.setHours(0, 0, 0, 0);
+
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-            const dayTrades = trades.filter((t) => t.date === dateStr);
-            const netR = dayTrades.reduce((acc, t) => acc + t.resultR, 0);
-            const hasMorning = morningDates.includes(dateStr);
 
-            // Check if today
-            // Check if today
-            // Use simulation date if active
-            const appDateStr = getAppToday(); // YYYY-MM-DD
-            const isToday = dateStr === appDateStr;
+            // Journal Data
+            const jData = journalMap[dateStr];
+            const hasTrades = jData && jData.count > 0;
+            const netR = jData ? jData.netR : 0;
+
+            const hasMorning = morningDates.includes(dateStr);
+            const hasEod = !!eodMap[dateStr];
+
+            // Simulation Date (Highlight)
+            const appDateStr = getAppToday();
+            const isSimToday = dateStr === appDateStr;
+
+            // Future/Past Logic
+            const thisDate = new Date(year, month, d);
+            thisDate.setHours(0, 0, 0, 0); // Zero out time for comparison
+            const isFuture = thisDate > realNow;
+            const isToday = thisDate.getTime() === realNow.getTime();
 
             els.push(
                 <div
                     key={d}
                     style={{
                         ...styles.dayCell,
-                        ...(isToday ? styles.dayCellToday : {}),
+                        ...(isSimToday ? styles.dayCellToday : {}),
+                        // Dim future days slightly?
+                        ...(isFuture ? { opacity: 0.5 } : {})
                     }}
                 >
                     <div style={styles.dayNumRow}>
-                        <span style={styles.dayNum}>{d}</span>
-                        {dayTrades.length > 0 && (
-                            <span
-                                style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color:
-                                        netR >= 0
-                                            ? "var(--color-green)"
-                                            : "var(--color-red)",
-                                }}
-                            >
+                        {/* Day Number */}
+                        <button
+                            onClick={() => handleDayClick(dateStr)}
+                            // Disable click for future if desired? User didn't strictly say disable click, just hide buttons.
+                            // But navigating to future to journal makes sense? "Henüz gelmemiş günlerin... daily journal yazmasın"
+                            // Let's allow click (planning ahead?) but hide the buttons as requested.
+                            style={{
+                                background: "none",
+                                border: "none",
+                                padding: 0,
+                                cursor: "pointer",
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: isSimToday ? "var(--accent-primary)" : "var(--text-primary)",
+                                textDecoration: isSimToday ? "underline" : "none",
+                            }}
+                        >
+                            {d}
+                        </button>
+                        {hasTrades && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: netR > 0 ? "var(--color-green)" : netR < 0 ? "var(--color-red)" : "var(--text-secondary)" }}>
                                 {netR > 0 ? "+" : ""}
                                 {netR.toFixed(1)} R
                             </span>
                         )}
                     </div>
 
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, overflowY: "auto" }}>
-                        {dayTrades.map((t) => (
-                            <div key={t.id} style={styles.tradePill}>
-                                <span style={{ fontWeight: 600 }}>{t.symbol}</span>
-                                <span>{t.dir === "Long" ? "L" : "S"}</span>
-                                <span>{t.resultR.toFixed(1)}</span>
-                            </div>
-                        ))}
-                    </div>
+                    {/* Trade Pills */}
+                    {hasTrades && jData?.trades.map(t => (
+                        <div key={t.id} style={styles.tradePill}>
+                            <span style={{ fontWeight: 600 }}>{t.symbol}</span>
+                            <span style={{ fontWeight: 700, color: t.outcome === "TP" ? "var(--color-green)" : t.outcome === "SL" ? "var(--color-red)" : "var(--text-secondary)" }}>
+                                {t.outcome || "—"}
+                            </span>
+                            <span>{t.resultR != null ? t.resultR.toFixed(1) : "-"}</span>
+                        </div>
+                    ))}
 
+                    {/* Bottom Links (Inside the day cell) */}
                     {hasMorning && (
-                        <Link href={`/morning/${dateStr}`} style={{
-                            marginTop: 4,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            border: "none",
-                            fontSize: 10,
-                            backgroundColor: "#EFF6FF",
-                            color: "#2563EB",
-                            cursor: "pointer",
-                            fontWeight: 500,
-                            width: "100%",
-                            textAlign: "center",
-                            textDecoration: "none",
-                            display: "block"
-                        }}>
+                        <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
                             Morning Analysis
                         </Link>
                     )}
 
-                    {eodMap[dateStr] && (
-                        <Link href={`/eod/${dateStr}`} style={{
-                            marginTop: 2,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            border: "none",
-                            fontSize: 10,
-                            backgroundColor: "#F0FDFA", // tealish
-                            color: "#0F766E",
-                            cursor: "pointer",
-                            fontWeight: 500,
-                            width: "100%",
-                            textAlign: "center",
-                            textDecoration: "none",
-                            display: "block"
-                        }}>
+                    {hasEod && (
+                        <Link href={`/eod/${dateStr}`} style={styles.linkPillTeal}>
                             EOD Review
                         </Link>
                     )}
 
-                    {!eodMap[dateStr] && isToday && (
+                    {!hasEod && !isFuture && (
                         <Link href={`/eod/${dateStr}`} style={{
                             marginTop: 2,
                             padding: "2px 8px",
                             borderRadius: 4,
                             border: "1px dashed #E5E7EB",
                             fontSize: 10,
-                            color: "#6B7280",
+                            color: "#9CA3AF",
                             cursor: "pointer",
                             width: "100%",
                             textAlign: "center",
@@ -267,7 +270,7 @@ const styles: Record<string, React.CSSProperties> = {
     gridBody: {
         display: "grid",
         gridTemplateColumns: "repeat(7, 1fr)",
-        gridAutoRows: "minmax(100px, 1fr)",
+        gridAutoRows: "minmax(120px, 1fr)",
         gap: 1,
         backgroundColor: "var(--border-subtle)", // lines
         flex: 1,
@@ -278,7 +281,7 @@ const styles: Record<string, React.CSSProperties> = {
         padding: 8,
         display: "flex",
         flexDirection: "column",
-        minHeight: 100,
+        minHeight: 120,
     },
     dayCellToday: {
         backgroundColor: "#F0F9FF",
@@ -291,11 +294,6 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: "space-between",
         marginBottom: 6,
     },
-    dayNum: {
-        fontSize: 12,
-        fontWeight: 600,
-        color: "var(--text-secondary)",
-    },
     tradePill: {
         fontSize: 10,
         backgroundColor: "#F3F4F6",
@@ -305,6 +303,51 @@ const styles: Record<string, React.CSSProperties> = {
         justifyContent: "space-between",
         gap: 4,
     },
+    linkPillBlue: {
+        marginTop: 2,
+        padding: "2px 8px",
+        borderRadius: 4,
+        border: "none",
+        fontSize: 10,
+        backgroundColor: "#EFF6FF",
+        color: "#2563EB",
+        cursor: "pointer",
+        fontWeight: 500,
+        width: "100%",
+        textAlign: "center",
+        textDecoration: "none",
+        display: "block"
+    },
+    linkPillTeal: {
+        marginTop: 2,
+        padding: "2px 8px",
+        borderRadius: 4,
+        border: "none",
+        fontSize: 10,
+        backgroundColor: "#F0FDFA", // tealish
+        color: "#0F766E",
+        cursor: "pointer",
+        fontWeight: 500,
+        width: "100%",
+        textAlign: "center",
+        textDecoration: "none",
+        display: "block"
+    },
+    linkPillGray: {
+        marginTop: 2,
+        padding: "2px 8px",
+        borderRadius: 4,
+        border: "1px solid var(--border-subtle)",
+        fontSize: 10,
+        backgroundColor: "#FFFFFF",
+        color: "var(--text-secondary)",
+        cursor: "pointer",
+        fontWeight: 500,
+        width: "100%",
+        textAlign: "center",
+        textDecoration: "none",
+        display: "block",
+    }
 };
 
 export default CalendarPage;

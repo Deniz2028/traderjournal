@@ -53,7 +53,21 @@ const MorningAnalysisPage: React.FC = () => {
 
     const [snapshot, setSnapshot] = useState<MorningMtfDaySnapshot | null>(null);
     const [activeTfBySymbol, setActiveTfBySymbol] = useState<Record<string, TF>>({});
+    const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
+
+    // Close lightbox on ESC
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                setLightboxImage(null);
+            }
+        };
+        if (lightboxImage) {
+            window.addEventListener("keydown", handleKeyDown);
+        }
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [lightboxImage]);
 
     // Settings for instrument list and timeframes
     const mtfSettings = useMemo(() => loadMorningMtfSettings(), []);
@@ -128,6 +142,23 @@ const MorningAnalysisPage: React.FC = () => {
         });
     };
 
+    const moveInstrument = (index: number, direction: -1 | 1) => {
+        setSnapshot((prev) => {
+            if (!prev) return prev;
+            const newInstruments = [...prev.instruments];
+            const targetIndex = index + direction;
+
+            if (targetIndex < 0 || targetIndex >= newInstruments.length) return prev;
+
+            // Swap
+            const temp = newInstruments[index];
+            newInstruments[index] = newInstruments[targetIndex];
+            newInstruments[targetIndex] = temp;
+
+            return { ...prev, instruments: newInstruments };
+        });
+    };
+
     const handleSaveAll = async () => {
         if (!snapshot) return;
         await saveMorningForDate(snapshot);
@@ -150,7 +181,7 @@ const MorningAnalysisPage: React.FC = () => {
                     </div>
                 )}
 
-                {snapshot.instruments.map((inst) => {
+                {snapshot.instruments.map((inst, index) => {
                     const tfs = inst.timeframes;
                     const activeTf = activeTfBySymbol[inst.symbol] ?? tfs[0]?.tf;
                     const active = tfs.find((tf) => tf.tf === activeTf) ?? tfs[0];
@@ -197,11 +228,39 @@ const MorningAnalysisPage: React.FC = () => {
                         <div key={inst.symbol} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
                             {/* Header */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                                <div>
-                                    <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
-                                    <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                        {subtitle}
-                                    </p>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => moveInstrument(index, -1)}
+                                            disabled={index === 0}
+                                            style={{
+                                                border: "none", background: "none", cursor: "pointer",
+                                                fontSize: 10, padding: 0, color: index === 0 ? "#E5E7EB" : "var(--text-secondary)"
+                                            }}
+                                            title="Move Up"
+                                        >
+                                            ▲
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => moveInstrument(index, 1)}
+                                            disabled={index === snapshot.instruments.length - 1}
+                                            style={{
+                                                border: "none", background: "none", cursor: "pointer",
+                                                fontSize: 10, padding: 0, color: index === snapshot.instruments.length - 1 ? "#E5E7EB" : "var(--text-secondary)"
+                                            }}
+                                            title="Move Down"
+                                        >
+                                            ▼
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
+                                        <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                            {subtitle}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {/* Daily Bias */}
@@ -304,7 +363,9 @@ const MorningAnalysisPage: React.FC = () => {
                                             borderRadius: 12,
                                             overflow: "hidden",
                                             border: "1px solid #E5E7EB",
+                                            cursor: "zoom-in"
                                         }}
+                                        onClick={() => setLightboxImage(active.chartUrl)}
                                     >
                                         <img
                                             src={active.chartUrl}
@@ -393,6 +454,24 @@ const MorningAnalysisPage: React.FC = () => {
                     Save morning snapshot
                 </button>
             </div>
+
+            {/* Lightbox Modal */}
+            {lightboxImage && (
+                <div
+                    style={{
+                        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: "rgba(0,0,0,0.9)", zIndex: 9999,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "zoom-out"
+                    }}
+                    onClick={() => setLightboxImage(null)}
+                >
+                    <img
+                        src={lightboxImage}
+                        style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain", borderRadius: 4 }}
+                    />
+                </div>
+            )}
         </div>
     );
 };

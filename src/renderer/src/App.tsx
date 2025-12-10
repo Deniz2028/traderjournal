@@ -9,6 +9,7 @@ import { TodayPage } from "./pages/TodayPage";
 import CalendarPage from "./pages/CalendarPage"; // Note: CalendarPage is default export now
 import { SettingsPage } from "./pages/SettingsPage";
 import EODReviewPage from "./pages/EODReviewPage";
+import { NewsPanel } from "./components/NewsPanel";
 
 export const App: React.FC = () => {
     return (
@@ -26,8 +27,14 @@ export const App: React.FC = () => {
 
                         <Route path="/today" component={TodayPage} />
                         <Route path="/calendar" component={CalendarPage} />
+                        <Route path="/calendar" component={CalendarPage} />
                         <Route path="/eod/:date" component={EODReviewPage} />
                         <Route path="/settings" component={SettingsPage} />
+                        <Route path="/news">
+                            <div style={{ padding: 24 }}>
+                                <NewsPanel />
+                            </div>
+                        </Route>
 
                         {/* Fallback */}
                         <Route>

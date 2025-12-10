@@ -49,6 +49,9 @@ const api = {
         getDay: (date: string) => ipcRenderer.invoke("journal:morning:getDay", date),
         saveDay: (snapshot: any) => ipcRenderer.invoke("journal:morning:saveDay", snapshot),
         listDays: () => ipcRenderer.invoke("journal:morning:listDays"),
+    },
+    news: {
+        getThisWeek: () => ipcRenderer.invoke("news:getThisWeek")
     }
 };
 

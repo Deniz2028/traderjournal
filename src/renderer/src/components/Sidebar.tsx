@@ -3,7 +3,6 @@ import React from "react";
 
 
 import { Link, useLocation } from "wouter";
-import { getAppToday } from "../utils/appDate";
 
 export const Sidebar: React.FC = () => {
     const [location] = useLocation();
@@ -35,6 +34,9 @@ export const Sidebar: React.FC = () => {
                 </Link>
                 <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                     Calendar
+                </Link>
+                <Link href="/news" style={{ ...styles.navItem, ...(isActive("/news") ? styles.navItemActive : {}) }}>
+                    News
                 </Link>
             </nav>
 

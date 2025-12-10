@@ -117,6 +117,55 @@ app.whenReady().then(() => {
         return eodStorage.getForMonth(yyyyMM);
     });
 
+    // --- News API ---
+    // --- News API ---
+    let cachedNewsData: any = null;
+    let lastNewsFetchTime: number = 0;
+    const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+
+    ipcMain.handle("news:getThisWeek", async () => {
+        try {
+            // Check cache
+            if (cachedNewsData && (Date.now() - lastNewsFetchTime < CACHE_DURATION)) {
+                return cachedNewsData;
+            }
+
+            return new Promise((resolve, reject) => {
+                const { net } = require("electron");
+                const request = net.request("https://nfs.faireconomy.media/ff_calendar_thisweek.json");
+                request.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+                request.on("response", (response) => {
+                    let data = "";
+                    response.on("data", (chunk) => {
+                        data += chunk;
+                    });
+                    response.on("end", () => {
+                        if (response.statusCode >= 200 && response.statusCode < 300) {
+                            try {
+                                const parsed = JSON.parse(data);
+                                cachedNewsData = parsed;
+                                lastNewsFetchTime = Date.now();
+                                resolve(parsed);
+                            } catch (e) {
+                                reject(new Error("Failed to parse news JSON"));
+                            }
+                        } else {
+                            reject(new Error(`HTTP ${response.statusCode}`));
+                        }
+                    });
+                });
+                request.on("error", (error) => {
+                    reject(error);
+                });
+                request.end();
+            });
+        } catch (error) {
+            console.error("News fetch error:", error);
+            throw error;
+        }
+    });
+
     createWindow()
 
     app.on('activate', function () {

@@ -102,30 +102,55 @@ export const SettingsPage: React.FC = () => {
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
             Select instruments to show on the Dashboard "Focus" area.
           </p>
+
+          <div style={{ marginBottom: 16, display: "flex", gap: 12 }}>
+            <select
+              style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--border-subtle)", minWidth: 200 }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !dashboardSymbols.includes(val)) {
+                  toggleDashboardSymbol(val);
+                  e.target.value = ""; // reset
+                }
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>+ Add Instrument</option>
+              {ALL_INSTRUMENTS.filter(s => !dashboardSymbols.includes(s)).map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {ALL_INSTRUMENTS.map((symbol) => {
-              const checked = dashboardSymbols.includes(symbol);
-              return (
+            {dashboardSymbols.map((symbol) => (
+              <div
+                key={symbol}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  border: "1px solid var(--accent-primary)",
+                  backgroundColor: "#EEF2FF",
+                  color: "var(--accent-primary)",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                {symbol}
                 <button
-                  key={symbol}
                   onClick={() => toggleDashboardSymbol(symbol)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: 999,
-                    border: checked
-                      ? "1px solid var(--accent-primary)"
-                      : "1px solid var(--border-subtle)",
-                    backgroundColor: checked ? "#EEF2FF" : "#FFFFFF",
-                    color: checked ? "var(--accent-primary)" : "var(--text-primary)",
-                    cursor: "pointer",
-                    fontSize: 13,
-                    fontWeight: 500,
-                  }}
+                  style={{ border: "none", background: "transparent", color: "var(--accent-primary)", cursor: "pointer", fontWeight: 700, padding: 0 }}
                 >
-                  {symbol}
+                  ×
                 </button>
-              );
-            })}
+              </div>
+            ))}
+            {dashboardSymbols.length === 0 && (
+              <span style={{ fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>No instruments selected.</span>
+            )}
           </div>
         </div>
 
@@ -140,31 +165,22 @@ export const SettingsPage: React.FC = () => {
 
           {/* Instrument Selector for MTF */}
           <div style={{ marginBottom: 16, borderBottom: "1px solid var(--border-subtle)", paddingBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Select Instrument:</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>Select Instrument to Edit:</div>
+
+            <select
+              value={activeSymbol}
+              onChange={(e) => setActiveSymbol(e.target.value)}
+              style={{ padding: "8px", borderRadius: 6, border: "1px solid var(--border-subtle)", minWidth: 200 }}
+            >
               {ALL_INSTRUMENTS.map(sym => (
-                <button
-                  key={sym}
-                  onClick={() => setActiveSymbol(sym)}
-                  style={{
-                    padding: "4px 10px",
-                    borderRadius: 6,
-                    border: activeSymbol === sym ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
-                    backgroundColor: activeSymbol === sym ? "#EEF2FF" : "#F9FAFB",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: "pointer"
-                  }}
-                >
-                  {sym}
-                </button>
+                <option key={sym} value={sym}>{sym}</option>
               ))}
-            </div>
+            </select>
           </div>
 
           <div style={{ marginBottom: 16 }}>
             <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-              Active instrument:
+              Editing:
             </span>{" "}
             <strong>{activeSymbol || "None"}</strong>
           </div>

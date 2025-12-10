@@ -4,6 +4,7 @@ import { getDashboardInstruments } from "../utils/settingsStorage";
 // Imports at top needed
 import { Link } from "wouter";
 import { getAppToday } from "../utils/appDate";
+import { NewsPanel } from "../components/NewsPanel";
 
 export const DashboardPage: React.FC = () => {
     const focus = getDashboardInstruments();
