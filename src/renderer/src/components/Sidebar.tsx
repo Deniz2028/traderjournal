@@ -3,6 +3,7 @@ import React from "react";
 
 
 import { Link, useLocation } from "wouter";
+import { useNewsMonitor } from "../hooks/useNewsMonitor";
 
 export const Sidebar: React.FC = () => {
     const [location] = useLocation();
@@ -16,11 +17,14 @@ export const Sidebar: React.FC = () => {
     };
 
     const [animateNews, setAnimateNews] = React.useState(true);
+    const { hasAlert, countdown } = useNewsMonitor();
 
     React.useEffect(() => {
         const timer = setTimeout(() => setAnimateNews(false), 4000);
         return () => clearTimeout(timer);
     }, []);
+
+    const shouldPulse = hasAlert || animateNews;
 
     return (
         <div style={styles.sidebar}>
@@ -52,9 +56,15 @@ export const Sidebar: React.FC = () => {
                 <Link href="/news" style={{
                     ...styles.navItem,
                     ...(isActive("/news") ? styles.navItemActive : {}),
-                    ...(animateNews && !isActive("/news") ? { animation: "newsPulse 1s ease-in-out infinite" } : {})
+                    ...(shouldPulse && !isActive("/news") ? { animation: "newsPulse 1s ease-in-out infinite" } : {}),
+                    display: "flex", justifyContent: "space-between", alignItems: "center"
                 }}>
-                    News
+                    <span>News</span>
+                    {hasAlert && countdown && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", backgroundColor: "#FFFFFF", padding: "1px 5px", borderRadius: 4, minWidth: 34, textAlign: "center", border: "1px solid #FECACA" }}>
+                            {countdown}
+                        </span>
+                    )}
                 </Link>
             </nav>
 
