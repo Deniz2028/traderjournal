@@ -1,6 +1,7 @@
 // src/renderer/src/pages/TodayPage.tsx
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Link } from "wouter";
 import {
     Bias3,
     Outcome,
@@ -276,8 +277,6 @@ export const TodayPage: React.FC = () => {
     };
 
     // --- Detail Views (similar to before, but using activeTrade) ---
-
-    const SYMBOL_OPTIONS = ["XAUUSD", "EURUSD", "GBPUSD", "DXY", "BTCUSD", "ETHUSD", "NQ", "ES"];
 
     // ... (rest of imports)
 
@@ -725,7 +724,18 @@ export const TodayPage: React.FC = () => {
                             <h1 className="page-title">Today</h1>
                             <p className="page-subtitle">Today's trades ({todayISO})</p>
                         </div>
-                        <button onClick={handleCreateTrade} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>+ Add Trade</button>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <Link href="/morning">
+                                <a style={{
+                                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                                    border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
+                                    display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer"
+                                }}>
+                                    🌅 Morning Analysis
+                                </a>
+                            </Link>
+                            <button onClick={handleCreateTrade} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>+ Add Trade</button>
+                        </div>
                     </div>
                     {renderTradeList()}
                 </>
