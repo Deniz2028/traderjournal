@@ -86,36 +86,12 @@ const MorningAnalysisPage: React.FC = () => {
     const mtfSettings = useMemo(() => loadMorningMtfSettings(), []);
 
     useEffect(() => {
-        // Determine which instruments to show.
-        // Logic: If settings have keys, use those keys. If empty, use defaults (DXY, XAUUSD, EURUSD).
-        let symbolsToShow = Object.keys(mtfSettings);
-        if (symbolsToShow.length === 0) {
-            symbolsToShow = ["DXY", "XAUUSD", "EURUSD"];
-        }
-        // Sort them based on INSTRUMENTS_META order if possible, or alphabetical
-        symbolsToShow.sort();
-
         fetchMorningForDate(dateISO).then((existing) => {
             if (existing) {
                 setSnapshot(existing);
             } else {
-                // Create new boilerplate snapshot
-                const instruments: MorningMtfInstrumentSnapshot[] = symbolsToShow.map((symbol) => {
-                    const tfs = getTimeframesForSymbol(symbol, mtfSettings);
-                    const timeframes: MorningMtfTimeframeSnapshot[] = tfs.map((tf) => ({
-                        tf,
-                        chartUrl: "",
-                        bias: "neutral",
-                        notes: "",
-                    }));
-                    return {
-                        symbol,
-                        dailyBias: "neutral",
-                        timeframes,
-                    };
-                },
-                );
-                setSnapshot({ date: dateISO, instruments });
+                // Default to empty list as per user request
+                setSnapshot({ date: dateISO, instruments: [] });
             }
             setSettingsLoaded(true);
         });
@@ -192,8 +168,8 @@ const MorningAnalysisPage: React.FC = () => {
 
             <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                 {snapshot.instruments.length === 0 && (
-                    <div className="card" style={{ padding: 24 }}>
-                        No instruments configured. Go to Settings to add instruments.
+                    <div className="card" style={{ padding: 32, textAlign: "center", color: "var(--text-secondary)" }}>
+                        No instruments added. Click "+ Add Instrument" below to start.
                     </div>
                 )}
 
