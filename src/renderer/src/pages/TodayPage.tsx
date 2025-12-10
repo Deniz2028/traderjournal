@@ -296,7 +296,8 @@ export const TodayPage: React.FC = () => {
 
         return (
             <div className="card" style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                {/* Header with Centered Trade Bias */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                             <button onClick={handleBackToList} style={{ border: "none", background: "none", fontSize: 16, cursor: "pointer", padding: 0 }}>←</button>
@@ -304,54 +305,88 @@ export const TodayPage: React.FC = () => {
                         </div>
                         <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>{todayISO}</p>
                     </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Trade bias</span>
-                            <div>{renderBiasToggle(activeTrade.tradeBias, (b) => updateActiveTrade({ tradeBias: b }))}</div>
+
+                    {/* Centered Trade Bias */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700, letterSpacing: 0.5 }}>TRADE BIAS</span>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            {(["Long", "Short", "Neutral"] as const).map(b => {
+                                const isActive = activeTrade.tradeBias === b;
+                                let color = "#374151";
+                                let borderColor = "var(--border-subtle)";
+                                let bg = "#FFFFFF";
+
+                                if (b === "Long") { color = "#16A34A"; borderColor = isActive ? "#16A34A" : "var(--border-subtle)"; bg = isActive ? "#DCFCE7" : "#FFFFFF"; }
+                                if (b === "Short") { color = "#DC2626"; borderColor = isActive ? "#DC2626" : "var(--border-subtle)"; bg = isActive ? "#FEE2E2" : "#FFFFFF"; }
+                                if (b === "Neutral") { color = "#4B5563"; borderColor = isActive ? "#9CA3AF" : "var(--border-subtle)"; bg = isActive ? "#F3F4F6" : "#FFFFFF"; }
+
+                                return (
+                                    <button
+                                        key={b}
+                                        onClick={() => updateActiveTrade({ tradeBias: b })}
+                                        style={{
+                                            padding: "6px 16px", borderRadius: 999, fontSize: 13, fontWeight: 700,
+                                            border: `1px solid ${borderColor}`,
+                                            backgroundColor: bg,
+                                            color: color,
+                                            cursor: "pointer",
+                                            boxShadow: isActive ? "0 1px 2px rgba(0,0,0,0.05)" : "none",
+                                            transition: "all 0.2s"
+                                        }}
+                                    >
+                                        {b}
+                                    </button>
+                                )
+                            })}
                         </div>
+                    </div>
+
+                    <div>
                         <button
                             onClick={(e) => handleDeleteTrade(e, activeTrade.id)}
-                            style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer", textDecoration: "underline", alignSelf: "center" }}
+                            style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
                         >
                             Delete
                         </button>
                     </div>
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Symbol</label>
-                    <select
-                        value={activeTrade.symbol}
-                        onChange={(e) => updateActiveTrade({ symbol: e.target.value })}
-                        style={{
-                            width: 260,
-                            padding: "8px 10px",
-                            borderRadius: 8,
-                            border: "1px solid var(--border-subtle)",
-                            fontSize: 13,
-                            backgroundColor: "#FFFFFF"
-                        }}
-                    >
-                        {allSymbols.map(s => (
-                            <option key={s} value={s}>{s}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-                    {activeTrade.frames.map((f) => (
-                        <button
-                            key={f.id}
-                            onClick={() => setActiveFrameId(f.id)}
+                <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                    <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Symbol</label>
+                        <select
+                            value={activeTrade.symbol}
+                            onChange={(e) => updateActiveTrade({ symbol: e.target.value })}
                             style={{
-                                padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 500,
-                                border: f.id === activeFrameId ? "1px solid #FB923C" : "1px solid var(--border-subtle)",
-                                backgroundColor: f.id === activeFrameId ? "#FFF7ED" : "#FFFFFF",
+                                width: 260,
+                                padding: "8px 10px",
+                                borderRadius: 8,
+                                border: "1px solid var(--border-subtle)",
+                                fontSize: 13,
+                                backgroundColor: "#FFFFFF"
                             }}
                         >
-                            {f.timeframe}
-                        </button>
-                    ))}
+                            {allSymbols.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                        {activeTrade.frames.map((f) => (
+                            <button
+                                key={f.id}
+                                onClick={() => setActiveFrameId(f.id)}
+                                style={{
+                                    padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 500,
+                                    border: f.id === activeFrameId ? "1px solid #FB923C" : "1px solid var(--border-subtle)",
+                                    backgroundColor: f.id === activeFrameId ? "#FFF7ED" : "#FFFFFF",
+                                }}
+                            >
+                                {f.timeframe}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1.4fr)", gap: 24 }}>
@@ -365,27 +400,27 @@ export const TodayPage: React.FC = () => {
                         />
                         {renderChartPreview(activeFrame.link, `${activeTrade.symbol} ${activeFrame.timeframe} plan`)}
                     </div>
-                    <div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
                         <div style={{ marginBottom: 12 }}>
                             <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 6 }}>{activeFrame.timeframe} bias</span>
                             {renderBiasToggle(activeFrame.bias, (b) => updateFrame(activeFrame.id, { bias: b }))}
                         </div>
-                        <div>
+                        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
                             <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Notes</label>
                             <textarea
                                 value={activeFrame.notes}
                                 onChange={(e) => updateFrame(activeFrame.id, { notes: e.target.value })}
                                 rows={10}
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, resize: "vertical" }}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, resize: "vertical", flex: 1 }}
                             />
                         </div>
+                        {/* Save Button integrated here */}
+                        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+                            <button onClick={handleSavePreTrade} style={{ backgroundColor: "var(--accent-primary)", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>
+                                Save pre-trade plan
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
-                    <button onClick={handleSavePreTrade} style={{ backgroundColor: "var(--accent-primary)", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>
-                        Save pre-trade plan
-                    </button>
                 </div>
             </div>
         );
@@ -435,8 +470,8 @@ export const TodayPage: React.FC = () => {
     const renderPostTradeEditing = () => {
         if (!activeTrade) return null;
         return (
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+            <div className="card" style={{ marginBottom: 24, display: "flex", flexDirection: "column", height: "calc(100vh - 120px)", minHeight: 600 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, flexShrink: 0 }}>
                     <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <button onClick={handleBackToList} style={{ border: "none", background: "none", fontSize: 16, cursor: "pointer", padding: 0 }}>←</button>
@@ -445,35 +480,77 @@ export const TodayPage: React.FC = () => {
                         <p style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: 24 }}>{activeTrade.symbol}</p>
                     </div>
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                        <button onClick={() => setViewMode("preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", fontSize: 12, color: "var(--text-secondary)" }}>View Plan</button>
                         <button onClick={(e) => handleDeleteTrade(e, activeTrade.id)} style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer" }}>Delete</button>
                         <button onClick={() => setViewMode(hasPostReview(activeTrade) ? "postSummary" : "preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", fontSize: 12 }}>Cancel</button>
                     </div>
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(0, 2fr)", gap: 24 }}>
-                    <div>
-                        <div style={{ marginBottom: 12 }}>
-                            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Outcome</label>
-                            {renderOutcomeToggle(activeTrade.outcome, (o) => updateActiveTrade({ outcome: o }))}
-                        </div>
-                        <div style={{ marginBottom: 12 }}>
-                            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Result (R)</label>
-                            <input value={resultRInput} onChange={(e) => setResultRInput(e.target.value)} placeholder="1.0, -0.5..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13 }} />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Exit chart link</label>
-                            <input value={activeTrade.exitLink ?? ""} onChange={(e) => updateActiveTrade({ exitLink: e.target.value })} placeholder="URL..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 12 }} />
-                            {renderChartPreview(activeTrade.exitLink ?? "", "Exit snapshot")}
-                        </div>
-                    </div>
-                    <div>
-                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Learnings & Notes</label>
-                        <textarea value={activeTrade.exitNotes ?? ""} onChange={(e) => updateActiveTrade({ exitNotes: e.target.value })} rows={16} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, resize: "vertical" }} />
-                    </div>
-                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1.8fr 1fr", gap: 24, flex: 1, overflow: "hidden" }}>
+                    {/* Left Column: Chart - Takes full remaining height */}
+                    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Exit chart link</label>
+                        <input value={activeTrade.exitLink ?? ""} onChange={(e) => updateActiveTrade({ exitLink: e.target.value })} placeholder="TradingView snapshot URL..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 8 }} />
 
-                <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
-                    <button onClick={handleSavePostTrade} style={{ backgroundColor: "var(--accent-primary)", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>Save Review</button>
+                        <div
+                            style={{
+                                flex: 1,
+                                backgroundColor: "#F9FAFB",
+                                borderRadius: 8,
+                                border: "1px solid var(--border-subtle)",
+                                overflow: "hidden",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "zoom-in",
+                                position: "relative"
+                            }}
+                            onClick={() => activeTrade.exitLink && setLightboxImage(activeTrade.exitLink)}
+                        >
+                            {activeTrade.exitLink ? (
+                                <img src={activeTrade.exitLink} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+                            ) : (
+                                <div style={{ color: "var(--text-tertiary)", fontSize: 13, border: "1px dashed var(--border-subtle)", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    No chart image
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Column: Inputs & Notes */}
+                    <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+                        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+                            <div>
+                                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Outcome</label>
+                                {renderOutcomeToggle(activeTrade.outcome, (o) => updateActiveTrade({ outcome: o }))}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Result (R)</label>
+                                <input value={resultRInput} onChange={(e) => setResultRInput(e.target.value)} placeholder="0.0" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13 }} />
+                            </div>
+                        </div>
+
+                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Learnings & Notes</label>
+                        <textarea
+                            value={activeTrade.exitNotes ?? ""}
+                            onChange={(e) => updateActiveTrade({ exitNotes: e.target.value })}
+                            style={{
+                                width: "100%",
+                                padding: "12px",
+                                borderRadius: 8,
+                                border: "1px solid var(--border-subtle)",
+                                fontSize: 13,
+                                resize: "none",
+                                flex: 1,
+                                marginBottom: 16,
+                                fontFamily: "inherit"
+                            }}
+                        />
+
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button onClick={handleSavePostTrade} style={{ backgroundColor: "var(--accent-primary)", color: "#FFFFFF", padding: "10px 24px", borderRadius: 8, fontSize: 14, fontWeight: 600, width: "100%" }}>Save Review</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -483,19 +560,31 @@ export const TodayPage: React.FC = () => {
         if (!activeTrade) return null;
         return (
             <div className="card" style={{ marginBottom: 24 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginBottom: 24 }}>
+                    {/* Left: Back Button */}
                     <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <button onClick={handleBackToList} style={{ border: "none", background: "none", fontSize: 16, cursor: "pointer", padding: 0 }}>←</button>
-                            <h2 style={{ fontSize: 16, fontWeight: 600 }}>Review Summary</h2>
-                        </div>
-                        <p style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: 24 }}>{activeTrade.symbol}</p>
+                        <button
+                            onClick={handleBackToList}
+                            style={{
+                                border: "none", background: "none", fontSize: 13, cursor: "pointer", padding: 0,
+                                display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)", fontWeight: 500
+                            }}
+                        >
+                            <span style={{ fontSize: 16 }}>←</span> Back to List
+                        </button>
                     </div>
-                    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+
+                    {/* Center: Title */}
+                    <div style={{ textAlign: "center" }}>
+                        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Review Summary</h2>
+                        <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0, marginTop: 2 }}>{activeTrade.symbol}</p>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "flex-end" }}>
                         <button onClick={(e) => handleDeleteTrade(e, activeTrade.id)} style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer" }}>Delete</button>
                         <button onClick={() => setViewMode("editingPost")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#F3F4F6", fontSize: 12 }}>Edit Review</button>
 
-                        {/* Right arrow "Done" button */}
                         <button
                             onClick={handleBackToList}
                             title="Back to Journal List"
