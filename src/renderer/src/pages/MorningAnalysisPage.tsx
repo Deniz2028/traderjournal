@@ -167,6 +167,9 @@ const MorningAnalysisPage: React.FC = () => {
 
     return (
         <div>
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
             <div className="page-header">
                 <h1 className="page-title">Morning Analysis</h1>
                 <p className="page-subtitle">
@@ -460,15 +463,22 @@ const MorningAnalysisPage: React.FC = () => {
                 <div
                     style={{
                         position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: "rgba(0,0,0,0.9)", zIndex: 9999,
+                        backgroundColor: "rgba(0,0,0,0.8)",
+                        backdropFilter: "blur(12px)",
+                        zIndex: 9999,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "zoom-out"
+                        cursor: "zoom-out",
+                        animation: "fadeIn 0.25s ease-out"
                     }}
                     onClick={() => setLightboxImage(null)}
                 >
                     <img
                         src={lightboxImage}
-                        style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain", borderRadius: 4 }}
+                        style={{
+                            maxWidth: "98vw", maxHeight: "98vh",
+                            objectFit: "contain", borderRadius: 4,
+                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                        }}
                     />
                 </div>
             )}

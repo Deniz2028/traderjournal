@@ -579,7 +579,7 @@ export const TodayPage: React.FC = () => {
         if (!url) {
             return (
                 <div style={{
-                    width: "100%", height: 350, backgroundColor: "#F3F4F6", borderRadius: 8,
+                    width: "100%", height: 600, backgroundColor: "#F9FAFB", borderRadius: 8,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     color: "var(--text-tertiary)", fontSize: 13, border: "1px dashed var(--border-subtle)"
                 }}>
@@ -591,15 +591,28 @@ export const TodayPage: React.FC = () => {
             <div
                 style={{
                     borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-subtle)",
-                    height: 350, backgroundColor: "#000", position: "relative",
-                    cursor: "zoom-in"
+                    height: 600, backgroundColor: "#F9FAFB", position: "relative",
+                    cursor: "zoom-in", display: "flex", alignItems: "center", justifyContent: "center"
                 }}
                 onClick={() => setLightboxImage(url)}
             >
+                {/* Background blur effect for "nice transition" feel even in preview */}
+                <div
+                    style={{
+                        position: "absolute", inset: 0,
+                        backgroundImage: `url(${url})`, backgroundSize: "cover",
+                        filter: "blur(20px)", opacity: 0.3, zIndex: 0
+                    }}
+                />
+
                 <img
                     src={url}
                     alt={alt}
-                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    style={{
+                        maxWidth: "100%", maxHeight: "100%",
+                        objectFit: "contain", position: "relative", zIndex: 1,
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)"
+                    }}
                 />
             </div>
         );
@@ -611,6 +624,10 @@ export const TodayPage: React.FC = () => {
 
     return (
         <div className="page-container">
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+            `}</style>
+
             {/* Header & Trade List */}
             {viewMode === "list" && (
                 <>
@@ -640,15 +657,22 @@ export const TodayPage: React.FC = () => {
                 <div
                     style={{
                         position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-                        backgroundColor: "rgba(0,0,0,0.9)", zIndex: 9999,
+                        backgroundColor: "rgba(0,0,0,0.8)",
+                        backdropFilter: "blur(12px)",
+                        zIndex: 9999,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: "zoom-out"
+                        cursor: "zoom-out",
+                        animation: "fadeIn 0.25s ease-out"
                     }}
                     onClick={() => setLightboxImage(null)}
                 >
                     <img
                         src={lightboxImage}
-                        style={{ maxWidth: "95vw", maxHeight: "95vh", objectFit: "contain", borderRadius: 4 }}
+                        style={{
+                            maxWidth: "98vw", maxHeight: "98vh",
+                            objectFit: "contain", borderRadius: 4,
+                            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+                        }}
                     />
                 </div>
             )}
