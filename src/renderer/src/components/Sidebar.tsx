@@ -15,8 +15,22 @@ export const Sidebar: React.FC = () => {
         return location.startsWith(path);
     };
 
+    const [animateNews, setAnimateNews] = React.useState(true);
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => setAnimateNews(false), 4000);
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
         <div style={styles.sidebar}>
+            <style>{`
+                @keyframes newsPulse {
+                    0% { color: var(--text-secondary); transform: scale(1); }
+                    50% { color: #EF4444; font-weight: 700; background-color: #FEF2F2; transform: scale(1.02); }
+                    100% { color: var(--text-secondary); transform: scale(1); }
+                }
+            `}</style>
             <div style={styles.logoArea}>
                 <h2 style={styles.logoText}>Trade Journal</h2>
             </div>
@@ -35,7 +49,11 @@ export const Sidebar: React.FC = () => {
                 <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                     Calendar
                 </Link>
-                <Link href="/news" style={{ ...styles.navItem, ...(isActive("/news") ? styles.navItemActive : {}) }}>
+                <Link href="/news" style={{
+                    ...styles.navItem,
+                    ...(isActive("/news") ? styles.navItemActive : {}),
+                    ...(animateNews && !isActive("/news") ? { animation: "newsPulse 1s ease-in-out infinite" } : {})
+                }}>
                     News
                 </Link>
             </nav>
