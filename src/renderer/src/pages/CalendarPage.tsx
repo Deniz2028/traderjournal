@@ -121,9 +121,6 @@ export const CalendarPage: React.FC = () => {
                         {/* Day Number */}
                         <button
                             onClick={() => handleDayClick(dateStr)}
-                            // Disable click for future if desired? User didn't strictly say disable click, just hide buttons.
-                            // But navigating to future to journal makes sense? "Henüz gelmemiş günlerin... daily journal yazmasın"
-                            // Let's allow click (planning ahead?) but hide the buttons as requested.
                             style={{
                                 background: "none",
                                 border: "none",
@@ -145,6 +142,15 @@ export const CalendarPage: React.FC = () => {
                         )}
                     </div>
 
+                    {/* Morning Analysis - Moved to Top */}
+                    {hasMorning && (
+                        <div style={{ marginBottom: 6 }}>
+                            <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
+                                Morning Analysis
+                            </Link>
+                        </div>
+                    )}
+
                     {/* Trade Pills */}
                     {hasTrades && jData?.trades.map(t => (
                         <div key={t.id} style={styles.tradePill}>
@@ -152,18 +158,12 @@ export const CalendarPage: React.FC = () => {
                             <span style={{ fontWeight: 700, color: t.outcome === "TP" ? "var(--color-green)" : t.outcome === "SL" ? "var(--color-red)" : "var(--text-secondary)" }}>
                                 {t.outcome || "—"}
                             </span>
-                            <span>{t.resultR != null ? t.resultR.toFixed(1) : "-"}</span>
+                            <span>{t.resultR != null ? `${t.resultR > 0 ? "+" : ""}${t.resultR.toFixed(1)} R` : "-"}</span>
                         </div>
                     ))}
 
                     {/* Bottom Links (pinned to bottom) */}
                     <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
-                        {hasMorning && (
-                            <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
-                                Morning Analysis
-                            </Link>
-                        )}
-
                         {hasEod && (
                             <Link href={`/eod/${dateStr}`} style={styles.linkPillTeal}>
                                 EOD Review
