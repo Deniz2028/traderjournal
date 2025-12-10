@@ -143,10 +143,16 @@ export const CalendarPage: React.FC = () => {
                     </div>
 
                     {/* Morning Analysis - Moved to Top */}
-                    {hasMorning && (
+                    {hasMorning ? (
                         <div style={{ marginBottom: 6 }}>
                             <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
                                 Morning Analysis
+                            </Link>
+                        </div>
+                    ) : !isFuture && (
+                        <div style={{ marginBottom: 6 }}>
+                            <Link href={`/morning/${dateStr}`} style={styles.linkPillGray}>
+                                + Morning
                             </Link>
                         </div>
                     )}
