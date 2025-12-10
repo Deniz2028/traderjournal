@@ -156,36 +156,37 @@ export const CalendarPage: React.FC = () => {
                         </div>
                     ))}
 
-                    {/* Bottom Links (Inside the day cell) */}
-                    {hasMorning && (
-                        <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
-                            Morning Analysis
-                        </Link>
-                    )}
+                    {/* Bottom Links (pinned to bottom) */}
+                    <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
+                        {hasMorning && (
+                            <Link href={`/morning/${dateStr}`} style={styles.linkPillBlue}>
+                                Morning Analysis
+                            </Link>
+                        )}
 
-                    {hasEod && (
-                        <Link href={`/eod/${dateStr}`} style={styles.linkPillTeal}>
-                            EOD Review
-                        </Link>
-                    )}
+                        {hasEod && (
+                            <Link href={`/eod/${dateStr}`} style={styles.linkPillTeal}>
+                                EOD Review
+                            </Link>
+                        )}
 
-                    {!hasEod && !isFuture && (
-                        <Link href={`/eod/${dateStr}`} style={{
-                            marginTop: 2,
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            border: "1px dashed #E5E7EB",
-                            fontSize: 10,
-                            color: "#9CA3AF",
-                            cursor: "pointer",
-                            width: "100%",
-                            textAlign: "center",
-                            textDecoration: "none",
-                            display: "block"
-                        }}>
-                            + EOD
-                        </Link>
-                    )}
+                        {!hasEod && !isFuture && (
+                            <Link href={`/eod/${dateStr}`} style={{
+                                padding: "2px 8px",
+                                borderRadius: 4,
+                                border: "1px dashed #E5E7EB",
+                                fontSize: 10,
+                                color: "#9CA3AF",
+                                cursor: "pointer",
+                                width: "100%",
+                                textAlign: "center",
+                                textDecoration: "none",
+                                display: "block"
+                            }}>
+                                + EOD
+                            </Link>
+                        )}
+                    </div>
                 </div>
             );
         }
