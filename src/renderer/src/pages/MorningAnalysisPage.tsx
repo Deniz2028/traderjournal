@@ -55,40 +55,18 @@ const MorningAnalysisPage: React.FC = () => {
     const [activeTfBySymbol, setActiveTfBySymbol] = useState<Record<string, TF>>({});
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
-    const [isAdding, setIsAdding] = useState(false);
-    const [newSymbol, setNewSymbol] = useState("");
 
     const handleAddInstrument = () => {
-        if (!newSymbol.trim()) return;
-        const symbol = newSymbol.trim().toUpperCase();
-
-        // Prevent duplicates
-        if (snapshot?.instruments.find(i => i.symbol === symbol)) {
-            alert("Instrument already exists.");
-            return;
-        }
-
-        const tfs = getTimeframesForSymbol(symbol, mtfSettings);
-        const timeframes: MorningMtfTimeframeSnapshot[] = tfs.map((tf) => ({
-            tf,
-            chartUrl: "",
-            bias: "neutral",
-            notes: "",
-        }));
-
         const newInst: MorningMtfInstrumentSnapshot = {
-            symbol,
+            symbol: "",
             dailyBias: "neutral",
-            timeframes,
+            timeframes: [
+                { tf: "4H", chartUrl: "", bias: "neutral", notes: "" },
+                { tf: "15M", chartUrl: "", bias: "neutral", notes: "" },
+                { tf: "5M", chartUrl: "", bias: "neutral", notes: "" },
+            ],
         };
-
         setSnapshot(prev => prev ? { ...prev, instruments: [...prev.instruments, newInst] } : null);
-
-        // Init active tab
-        setActiveTfBySymbol(prev => ({ ...prev, [symbol]: tfs[0] || "4H" }));
-
-        setNewSymbol("");
-        setIsAdding(false);
     };
 
     // Close lightbox on ESC
@@ -163,16 +141,16 @@ const MorningAnalysisPage: React.FC = () => {
     }
 
     const updateInstrument = (
-        symbol: string,
+        index: number,
         updater: (inst: MorningMtfInstrumentSnapshot) => MorningMtfInstrumentSnapshot,
     ) => {
         setSnapshot((prev) => {
             if (!prev) return prev;
+            const newInstruments = [...prev.instruments];
+            newInstruments[index] = updater(newInstruments[index]);
             return {
                 ...prev,
-                instruments: prev.instruments.map((inst) =>
-                    inst.symbol === symbol ? updater(inst) : inst,
-                ),
+                instruments: newInstruments,
             };
         });
     };
@@ -232,11 +210,11 @@ const MorningAnalysisPage: React.FC = () => {
                     if (!active) return null;
 
                     const onChangeDailyBias = (bias: Bias) => {
-                        updateInstrument(inst.symbol, (cur) => ({ ...cur, dailyBias: bias }));
+                        updateInstrument(index, (cur) => ({ ...cur, dailyBias: bias }));
                     };
 
                     const onChangeChartUrl = (tf: TF, val: string) => {
-                        updateInstrument(inst.symbol, (cur) => ({
+                        updateInstrument(index, (cur) => ({
                             ...cur,
                             timeframes: cur.timeframes.map((t) =>
                                 t.tf === tf ? { ...t, chartUrl: val } : t,
@@ -245,7 +223,7 @@ const MorningAnalysisPage: React.FC = () => {
                     };
 
                     const onChangeTfBias = (tf: TF, bias: Bias) => {
-                        updateInstrument(inst.symbol, (cur) => ({
+                        updateInstrument(index, (cur) => ({
                             ...cur,
                             timeframes: cur.timeframes.map((t) =>
                                 t.tf === tf ? { ...t, bias } : t,
@@ -254,7 +232,7 @@ const MorningAnalysisPage: React.FC = () => {
                     };
 
                     const onChangeNotes = (tf: TF, val: string) => {
-                        updateInstrument(inst.symbol, (cur) => ({
+                        updateInstrument(index, (cur) => ({
                             ...cur,
                             timeframes: cur.timeframes.map((t) =>
                                 t.tf === tf ? { ...t, notes: val } : t,
@@ -262,8 +240,18 @@ const MorningAnalysisPage: React.FC = () => {
                         }));
                     };
 
+                    const handleDelete = () => {
+                        if (confirm("Remove this instrument?")) {
+                            setSnapshot((prev) => {
+                                if (!prev) return prev;
+                                const newInst = prev.instruments.filter((_, i) => i !== index);
+                                return { ...prev, instruments: newInst };
+                            });
+                        }
+                    };
+
                     return (
-                        <div key={inst.symbol} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div key={index} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
                             {/* Header */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                                 <div style={{ display: "flex", gap: 8 }}>
@@ -293,45 +281,97 @@ const MorningAnalysisPage: React.FC = () => {
                                             ▼
                                         </button>
                                     </div>
-                                    <div>
-                                        <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
-                                        <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                            {subtitle}
-                                        </p>
+
+                                    {/* Title / Selector */}
+                                    <div style={{ minWidth: 200 }}>
+                                        {inst.symbol === "" ? (
+                                            <select
+                                                autoFocus
+                                                value=""
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (!val) return;
+                                                    updateInstrument(index, (cur) => ({ ...cur, symbol: val }));
+                                                    setActiveTfBySymbol((prev) => ({ ...prev, [val]: "4H" }));
+                                                }}
+                                                style={{
+                                                    fontSize: 14, fontWeight: 600, padding: "8px", width: "100%",
+                                                    borderRadius: 6, border: "1px solid var(--accent-primary)", outline: "none"
+                                                }}
+                                            >
+                                                <option value="">Select Instrument...</option>
+                                                {INSTRUMENTS_META.map((m) => (
+                                                    <option key={m.symbol} value={m.symbol}>
+                                                        {m.title}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div>
+                                                <h2 style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                                                    {title}
+                                                    <button
+                                                        onClick={() => updateInstrument(index, c => ({ ...c, symbol: "" }))}
+                                                        style={{ fontSize: 12, opacity: 0.4, border: "none", background: "none", cursor: "pointer" }}
+                                                        title="Change Symbol"
+                                                    >
+                                                        ✎
+                                                    </button>
+                                                </h2>
+                                                <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                                                    {subtitle}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Daily Bias */}
-                                <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
-                                        Daily bias
+                                {/* Right: Daily Bias + Delete */}
+                                <div style={{ display: 'flex', gap: 16 }}>
+                                    <div style={{ textAlign: "right" }}>
+                                        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
+                                            Daily bias
+                                        </div>
+                                        <div style={{ fontSize: 18, fontWeight: 700, color: biasColor[inst.dailyBias] }}>
+                                            {biasLabel[inst.dailyBias].toUpperCase()}
+                                        </div>
+                                        <div style={{ marginTop: 8, display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                                            {(["long", "neutral", "short"] as Bias[]).map((b) => (
+                                                <button
+                                                    key={b}
+                                                    type="button"
+                                                    onClick={() => onChangeDailyBias(b)}
+                                                    style={{
+                                                        padding: "4px 10px",
+                                                        borderRadius: 999,
+                                                        fontSize: 11,
+                                                        border:
+                                                            inst.dailyBias === b
+                                                                ? "1px solid var(--accent-primary)"
+                                                                : "1px solid var(--border-subtle)",
+                                                        backgroundColor:
+                                                            inst.dailyBias === b ? "#EEF2FF" : "#FFFFFF",
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    {biasLabel[b]}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: 18, fontWeight: 700, color: biasColor[inst.dailyBias] }}>
-                                        {biasLabel[inst.dailyBias].toUpperCase()}
-                                    </div>
-                                    <div style={{ marginTop: 8, display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                                        {(["long", "neutral", "short"] as Bias[]).map((b) => (
-                                            <button
-                                                key={b}
-                                                type="button"
-                                                onClick={() => onChangeDailyBias(b)}
-                                                style={{
-                                                    padding: "4px 10px",
-                                                    borderRadius: 999,
-                                                    fontSize: 11,
-                                                    border:
-                                                        inst.dailyBias === b
-                                                            ? "1px solid var(--accent-primary)"
-                                                            : "1px solid var(--border-subtle)",
-                                                    backgroundColor:
-                                                        inst.dailyBias === b ? "#EEF2FF" : "#FFFFFF",
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                {biasLabel[b]}
-                                            </button>
-                                        ))}
-                                    </div>
+
+                                    <button
+                                        onClick={handleDelete}
+                                        style={{
+                                            height: 28, width: 28, borderRadius: 6, border: "none",
+                                            background: "#FEF2F2", color: "#B91C1C", cursor: "pointer",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            alignSelf: "start"
+                                        }}
+                                        title="Remove Instrument"
+                                    >
+                                        ×
+                                    </button>
                                 </div>
                             </div>
 
@@ -476,34 +516,19 @@ const MorningAnalysisPage: React.FC = () => {
 
             {/* Add Instrument Section */}
             <div style={{ marginTop: 24 }}>
-                {isAdding ? (
-                    <div className="card" style={{ padding: 16, display: "flex", gap: 12, alignItems: "center" }}>
-                        <input
-                            autoFocus
-                            placeholder="Symbol (e.g. SOLUSD)"
-                            value={newSymbol}
-                            onChange={e => setNewSymbol(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && handleAddInstrument()}
-                            style={{ padding: "8px 12px", borderRadius: 6, border: "1px solid var(--border-subtle)", fontSize: 13, flex: 1, maxWidth: 300 }}
-                        />
-                        <button onClick={handleAddInstrument} style={{ padding: "8px 16px", backgroundColor: "#111827", color: "white", borderRadius: 6, cursor: "pointer", fontSize: 13, fontWeight: 500, border: "none" }}>Add</button>
-                        <button onClick={() => setIsAdding(false)} style={{ padding: "8px 16px", backgroundColor: "transparent", color: "#6B7280", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>Cancel</button>
-                    </div>
-                ) : (
-                    <button
-                        onClick={() => setIsAdding(true)}
-                        style={{
-                            width: "100%", padding: 16, borderRadius: 8,
-                            border: "2px dashed var(--border-subtle)",
-                            color: "var(--text-secondary)", fontWeight: 600,
-                            backgroundColor: "transparent", cursor: "pointer",
-                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                            fontSize: 13
-                        }}
-                    >
-                        <span>+ Add Instrument</span>
-                    </button>
-                )}
+                <button
+                    onClick={handleAddInstrument}
+                    style={{
+                        width: "100%", padding: 16, borderRadius: 8,
+                        border: "2px dashed var(--border-subtle)",
+                        color: "var(--text-secondary)", fontWeight: 600,
+                        backgroundColor: "transparent", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        fontSize: 13
+                    }}
+                >
+                    <span>+ Add Instrument</span>
+                </button>
             </div>
 
             <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>

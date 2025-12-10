@@ -21,7 +21,7 @@ export const CalendarPage: React.FC = () => {
 
     useEffect(() => {
         loadData();
-    }, [year, month]);
+    }, [year, month, _location]);
 
     const loadData = async () => {
         try {
@@ -150,23 +150,13 @@ export const CalendarPage: React.FC = () => {
                                 Morning Analysis
                             </Link>
                         </div>
-                    ) : (!isFuture && (isToday || currentDate.getMonth() === new Date().getMonth())) && (
-                        /* Logic tweak: User said "past days". I'll interpret strictly. 
-                           However, standard UX is you can fill past. 
-                           User: "geçmiş günlerde ... yoksa yazdırmasın". 
-                           Let's simplify: Show '+' only if isToday or isFuture. 
-                           Wait, "future" doesn't need EOD.
-                           Let's use (!isPast).
-                           Defining isPast locally below.
-                        */
-                        !isPast && (
-                            <div style={{ marginBottom: 6 }}>
-                                <Link href={`/morning/${dateStr}`} style={styles.linkPillDashed}>
-                                    + Morning
-                                </Link>
-                            </div>
-                        )
-                    )}
+                    ) : (isToday && (
+                        <div style={{ marginBottom: 6 }}>
+                            <Link href={`/morning/${dateStr}`} style={styles.linkPillDashed}>
+                                + Morning
+                            </Link>
+                        </div>
+                    ))}
 
                     {/* Trade Pills */}
                     {hasTrades && jData?.trades.map(t => (
@@ -186,7 +176,7 @@ export const CalendarPage: React.FC = () => {
                                 EOD Review
                             </Link>
                         ) : (
-                            !isPast && (
+                            isToday && new Date().getHours() >= 12 && (
                                 <Link href={`/eod/${dateStr}`} style={styles.linkPillDashed}>
                                     + EOD
                                 </Link>
