@@ -723,7 +723,7 @@ export const TodayPage: React.FC = () => {
                 <>
                     <div className="page-header" style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
-                            <h1 className="page-title">Today</h1>
+                            <h1 className="page-title">Daily Journal</h1>
                             <p className="page-subtitle">Today's trades ({todayISO})</p>
                         </div>
                         <div style={{ display: "flex", gap: 12 }}>

@@ -48,7 +48,7 @@ export const Sidebar: React.FC = () => {
                     Morning Analysis
                 </Link>
                 <Link href="/today" style={{ ...styles.navItem, ...(isActive("/today") ? styles.navItemActive : {}) }}>
-                    Today
+                    Daily Journal
                 </Link>
                 <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                     Calendar
