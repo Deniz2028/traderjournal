@@ -17,6 +17,7 @@ import {
 import type { MorningMtfDaySnapshot } from "../shared/morningMtfTypes";
 import { eodStorage } from "./eodReviewStore";
 import { runMt5Summary } from "./mt5Process";
+import { exportAllData, importAllData } from "./backupManager";
 
 function createWindow(): void {
     // Create the browser window.
@@ -176,8 +177,6 @@ app.whenReady().then(() => {
     });
 
     // --- Backup & Restore ---
-    const { exportAllData, importAllData } = require("./backupManager");
-
     ipcMain.handle("backup:export", async (_event, localStorageData) => {
         return await exportAllData(localStorageData);
     });
