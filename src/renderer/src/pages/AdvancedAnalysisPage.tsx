@@ -1,5 +1,15 @@
-import React, { useState } from "react";
-import type { Mt5SummaryResponse, Mt5Summary, EquityPoint, SymbolStat } from "../types/advanced";
+// src/renderer/src/pages/AdvancedAnalysisPage.tsx
+import React, { useEffect, useState } from "react";
+import type {
+    Mt5SummaryResponse,
+    Mt5Summary,
+    EquityPoint,
+    DrawdownPoint,
+    SymbolStat,
+    SessionStat,
+    HourStat,
+    WeekdayStat,
+} from "../types/advanced";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -9,29 +19,6 @@ const minusDays = (days: number) => {
     return d.toISOString().slice(0, 10);
 };
 
-// --- DUMMY DATA FOR MAC USERS ---
-const DUMMY_SUMMARY: Mt5Summary = {
-    totalTrades: 142,
-    wins: 84,
-    losses: 58,
-    winrate: 59.1,
-    avgWin: 450.0,
-    avgLoss: 220.0,
-    expectancy: 175.5,
-    maxDrawdown: 1200.5,
-    equityCurve: Array.from({ length: 30 }).map((_, i) => ({
-        time: minusDays(30 - i),
-        balance: 5000 + i * 150 + (Math.random() * 400 - 200),
-        profit: 0
-    })),
-    symbols: [
-        { symbol: "XAUUSD", trades: 55, profit: 4200, winrate: 62 },
-        { symbol: "EURUSD", trades: 40, profit: 1250, winrate: 55 },
-        { symbol: "BTCUSD", trades: 25, profit: -800, winrate: 44 },
-        { symbol: "US30", trades: 22, profit: 3200, winrate: 68 },
-    ]
-};
-
 export const AdvancedAnalysisPage: React.FC = () => {
     const [dateFrom, setDateFrom] = useState(minusDays(90));
     const [dateTo, setDateTo] = useState(todayStr());
@@ -39,81 +26,58 @@ export const AdvancedAnalysisPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<Mt5SummaryResponse | null>(null);
 
+    useEffect(() => {
+        handleFetch();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleFetch = async () => {
-        // For Mac users who cannot run MT5 Python, we use dummy data if fetch fails
+        if (!window.mt5Api) {
+            setError("mt5Api is not available from preload.");
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
-            if (!window.mt5Api) {
-                throw new Error("mt5Api not available");
-            }
-
-            // Try fetching real data (will fail on Mac if no python/mt5)
-            // For now, let's artificially force failure or just use dummy data as requested
-            // The user said: "macde veri olmucak o yüzden şimdilik dumy koyar mısın"
-
-            // Simulate fetch delay
-            await new Promise(r => setTimeout(r, 800));
-
-            // Uncomment this block to enable real fetch attempt:
-            /*
             const resp = (await window.mt5Api.getSummary({
-              dateFrom,
-              dateTo,
+                dateFrom,
+                dateTo,
             })) as Mt5SummaryResponse;
-            if (resp.ok) {
-              setResult(resp);
-            } else {
-              // Fallback or show error
-              console.warn("MT5 Service error, falling back to dummy?", resp.error);
-              throw new Error(resp.error || "Service error");
+            setResult(resp);
+            if (!resp.ok && resp.error) {
+                setError(resp.error);
             }
-            */
-
-            // Using dummy data directly as requested:
-            setResult({
-                ok: true,
-                hasData: true,
-                summary: DUMMY_SUMMARY
-            });
-
         } catch (err: any) {
-            console.error(err);
-            // Fallback to dummy data on error anyway
-            setResult({
-                ok: true,
-                hasData: true,
-                summary: DUMMY_SUMMARY
-            });
-            // Keep error null to show data cleanly
+            setError(String(err?.message ?? err));
         } finally {
             setLoading(false);
         }
     };
 
     const summary: Mt5Summary | null | undefined = result?.summary;
+    const isDummy = summary?.useDummy || result?.useDummy;
 
     return (
         <div>
             <div className="page-header">
                 <h1 className="page-title">Advanced Analysis</h1>
                 <p className="page-subtitle">
-                    MT5 account performance overview (Python service)
+                    MT5 account performance overview – live on Windows, dummy on Mac.
                 </p>
             </div>
 
-            {/* Date range + fetch button */}
+            {/* Date range + fetch */}
             <div
                 className="card"
                 style={{
-                    marginBottom: 24,
+                    marginBottom: 16,
                     display: "flex",
                     alignItems: "center",
                     gap: 16,
                     flexWrap: "wrap",
                 }}
             >
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={styles.fieldCol}>
                     <label style={styles.label}>From</label>
                     <input
                         type="date"
@@ -122,7 +86,7 @@ export const AdvancedAnalysisPage: React.FC = () => {
                         style={styles.input}
                     />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={styles.fieldCol}>
                     <label style={styles.label}>To</label>
                     <input
                         type="date"
@@ -138,7 +102,7 @@ export const AdvancedAnalysisPage: React.FC = () => {
                         style={styles.fetchBtn}
                         disabled={loading}
                     >
-                        {loading ? "Fetching..." : "Fetch from MT5 (Dummy for Mac)"}
+                        {loading ? "Fetching..." : "Fetch from MT5"}
                     </button>
                 </div>
             </div>
@@ -146,25 +110,46 @@ export const AdvancedAnalysisPage: React.FC = () => {
             {error && (
                 <div
                     className="card"
-                    style={{ marginBottom: 16, borderColor: "#FCA5A5", color: "#B91C1C" }}
+                    style={{
+                        marginBottom: 12,
+                        borderColor: "#FCA5A5",
+                        color: "#B91C1C",
+                    }}
                 >
                     <strong>Error:</strong> {error}
                 </div>
             )}
 
-            {result && !result.ok && !error && (
-                <div className="card" style={{ marginBottom: 16 }}>
+            {result && !error && !result.ok && (
+                <div className="card" style={{ marginBottom: 12 }}>
                     <p style={{ color: "var(--text-secondary)" }}>
                         Service returned an error.
                     </p>
                 </div>
             )}
 
-            {/* Intro message if no result yet */}
-            {!result && !loading && (
-                <div className="card">
+            {result && result.ok && result.hasData === false && (
+                <div className="card" style={{ marginBottom: 12 }}>
                     <p style={{ color: "var(--text-secondary)" }}>
-                        Click "Fetch" to load analysis data.
+                        No trades found for this range.
+                    </p>
+                </div>
+            )}
+
+            {isDummy && (
+                <div
+                    className="card"
+                    style={{
+                        marginBottom: 12,
+                        borderColor: "#BFDBFE",
+                        background:
+                            "linear-gradient(90deg, rgba(191,219,254,0.3), rgba(219,234,254,0.1))",
+                    }}
+                >
+                    <p style={{ fontSize: 13, color: "#1D4ED8" }}>
+                        You&apos;re currently seeing <strong>dummy demo data</strong> –
+                        on Windows with MT5 + MetaTrader5 Python package, this panel will
+                        use your real account history.
                     </p>
                 </div>
             )}
@@ -173,29 +158,48 @@ export const AdvancedAnalysisPage: React.FC = () => {
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     {/* Top metrics */}
                     <div style={styles.metricsRow}>
-                        <MetricCard
-                            label="Total trades"
-                            value={summary.totalTrades}
-                        />
+                        <MetricCard label="Total trades" value={summary.totalTrades} />
                         <MetricCard
                             label="Winrate"
                             value={summary.winrate.toFixed(1) + " %"}
                         />
                         <MetricCard
                             label="Expectancy"
-                            value={summary.expectancy.toFixed(2)}
-                            hint="Per trade"
+                            value={summary.expectancyMoney.toFixed(2)}
+                            hint="Per trade (account currency)"
                         />
                         <MetricCard
                             label="Max Drawdown"
-                            value={summary.maxDrawdown.toFixed(2)}
+                            value={summary.maxDrawdownMoney.toFixed(2)}
+                        />
+                        <MetricCard
+                            label="Avg Win"
+                            value={summary.avgWinMoney.toFixed(2)}
+                        />
+                        <MetricCard
+                            label="Avg Loss"
+                            value={summary.avgLossMoney.toFixed(2)}
+                        />
+                        <MetricCard
+                            label="Longest Win Streak"
+                            value={summary.longestWinStreak}
+                        />
+                        <MetricCard
+                            label="Longest Loss Streak"
+                            value={summary.longestLossStreak}
                         />
                     </div>
 
-                    {/* Equity curve */}
-                    <div className="card">
-                        <h3 style={styles.sectionTitle}>Equity Curve</h3>
-                        <EquityChart points={summary.equityCurve} />
+                    {/* Charts row */}
+                    <div style={styles.chartsRow}>
+                        <div className="card" style={styles.chartCard}>
+                            <h3 style={styles.sectionTitle}>Equity Curve</h3>
+                            <EquityChart points={summary.equityCurve} />
+                        </div>
+                        <div className="card" style={styles.chartCard}>
+                            <h3 style={styles.sectionTitle}>Drawdown Curve</h3>
+                            <DrawdownChart points={summary.drawdownCurve} />
+                        </div>
                     </div>
 
                     {/* Symbol stats */}
@@ -203,17 +207,33 @@ export const AdvancedAnalysisPage: React.FC = () => {
                         <h3 style={styles.sectionTitle}>By Symbol</h3>
                         <SymbolTable symbols={summary.symbols} />
                     </div>
+
+                    {/* Session + Hour + Weekday */}
+                    <div style={styles.bottomGrid}>
+                        <div className="card">
+                            <h3 style={styles.sectionTitle}>By Session</h3>
+                            <SessionTable sessions={summary.sessions} />
+                        </div>
+                        <div className="card">
+                            <h3 style={styles.sectionTitle}>By Hour of Day</h3>
+                            <HourTable hours={summary.hours} />
+                        </div>
+                        <div className="card">
+                            <h3 style={styles.sectionTitle}>By Weekday</h3>
+                            <WeekdayTable weekdays={summary.weekdays} />
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
     );
 };
 
-const MetricCard: React.FC<{ label: string; value: string | number; hint?: string }> = ({
-    label,
-    value,
-    hint,
-}) => (
+const MetricCard: React.FC<{
+    label: string;
+    value: string | number;
+    hint?: string;
+}> = ({ label, value, hint }) => (
     <div className="card" style={styles.metricCard}>
         <span style={styles.metricLabel}>{label}</span>
         <span style={styles.metricValue}>{value}</span>
@@ -221,10 +241,9 @@ const MetricCard: React.FC<{ label: string; value: string | number; hint?: strin
     </div>
 );
 
-// Basit CSS tabanlı "area" tarzı equity grafiği
 const EquityChart: React.FC<{ points: EquityPoint[] }> = ({ points }) => {
     if (!points || points.length === 0) {
-        return <p style={{ color: "var(--text-secondary)" }}>No data.</p>;
+        return <p style={styles.mutedText}>No data.</p>;
     }
 
     const balances = points.map((p) => p.balance);
@@ -236,7 +255,7 @@ const EquityChart: React.FC<{ points: EquityPoint[] }> = ({ points }) => {
         <div style={styles.chartContainer}>
             {points.map((p, idx) => {
                 const normalized = (p.balance - minB) / range;
-                const height = 10 + normalized * 80;
+                const height = 20 + normalized * 80; // 20% - 100%
                 return (
                     <div
                         key={idx}
@@ -252,9 +271,38 @@ const EquityChart: React.FC<{ points: EquityPoint[] }> = ({ points }) => {
     );
 };
 
+const DrawdownChart: React.FC<{ points: DrawdownPoint[] }> = ({ points }) => {
+    if (!points || points.length === 0) {
+        return <p style={styles.mutedText}>No data.</p>;
+    }
+
+    const dds = points.map((p) => p.drawdown);
+    const maxDD = Math.max(...dds);
+    const range = maxDD || 1;
+
+    return (
+        <div style={styles.chartContainer}>
+            {points.map((p, idx) => {
+                const normalized = p.drawdown / range;
+                const height = normalized * 100;
+                return (
+                    <div
+                        key={idx}
+                        style={{
+                            ...styles.chartBarDD,
+                            height: `${height}%`,
+                        }}
+                        title={`${p.time}\nDrawdown: ${p.drawdown.toFixed(2)}`}
+                    />
+                );
+            })}
+        </div>
+    );
+};
+
 const SymbolTable: React.FC<{ symbols: SymbolStat[] }> = ({ symbols }) => {
     if (!symbols || symbols.length === 0) {
-        return <p style={{ color: "var(--text-secondary)" }}>No symbol stats.</p>;
+        return <p style={styles.mutedText}>No symbol stats.</p>;
     }
     return (
         <table style={styles.table}>
@@ -280,7 +328,96 @@ const SymbolTable: React.FC<{ symbols: SymbolStat[] }> = ({ symbols }) => {
     );
 };
 
+const SessionTable: React.FC<{ sessions: SessionStat[] }> = ({ sessions }) => {
+    if (!sessions || sessions.length === 0) {
+        return <p style={styles.mutedText}>No session stats.</p>;
+    }
+    return (
+        <table style={styles.tableSmall}>
+            <thead>
+                <tr style={styles.headerRow}>
+                    <th style={styles.th}>Session</th>
+                    <th style={styles.th}>Trades</th>
+                    <th style={styles.th}>Profit</th>
+                    <th style={styles.th}>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {sessions.map((s) => (
+                    <tr key={s.session} style={styles.row}>
+                        <td style={styles.td}>{s.session}</td>
+                        <td style={styles.td}>{s.trades}</td>
+                        <td style={styles.td}>{s.profit.toFixed(2)}</td>
+                        <td style={styles.td}>{s.winrate.toFixed(1)} %</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
+const HourTable: React.FC<{ hours: HourStat[] }> = ({ hours }) => {
+    if (!hours || hours.length === 0) {
+        return <p style={styles.mutedText}>No hour stats.</p>;
+    }
+    return (
+        <table style={styles.tableSmall}>
+            <thead>
+                <tr style={styles.headerRow}>
+                    <th style={styles.th}>Hour</th>
+                    <th style={styles.th}>Trades</th>
+                    <th style={styles.th}>Profit</th>
+                    <th style={styles.th}>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {hours.map((h) => (
+                    <tr key={h.hour} style={styles.row}>
+                        <td style={styles.td}>{h.hour}:00</td>
+                        <td style={styles.td}>{h.trades}</td>
+                        <td style={styles.td}>{h.profit.toFixed(2)}</td>
+                        <td style={styles.td}>{h.winrate.toFixed(1)} %</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
+const WeekdayTable: React.FC<{ weekdays: WeekdayStat[] }> = ({ weekdays }) => {
+    if (!weekdays || weekdays.length === 0) {
+        return <p style={styles.mutedText}>No weekday stats.</p>;
+    }
+    return (
+        <table style={styles.tableSmall}>
+            <thead>
+                <tr style={styles.headerRow}>
+                    <th style={styles.th}>Day</th>
+                    <th style={styles.th}>Trades</th>
+                    <th style={styles.th}>Profit</th>
+                    <th style={styles.th}>Winrate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {weekdays.map((w) => (
+                    <tr key={w.weekday} style={styles.row}>
+                        <td style={styles.td}>{w.name}</td>
+                        <td style={styles.td}>{w.trades}</td>
+                        <td style={styles.td}>{w.profit.toFixed(2)}</td>
+                        <td style={styles.td}>{w.winrate.toFixed(1)} %</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+
 const styles: Record<string, React.CSSProperties> = {
+    fieldCol: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+    },
     label: {
         fontSize: 12,
         fontWeight: 600,
@@ -300,16 +437,14 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: 8,
         fontSize: 13,
         fontWeight: 500,
-        border: "none",
-        cursor: "pointer",
     },
     metricsRow: {
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+        gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
         gap: 16,
     },
     metricCard: {
-        padding: "16px 18px",
+        padding: "14px 16px",
         display: "flex",
         flexDirection: "column",
         gap: 4,
@@ -319,17 +454,25 @@ const styles: Record<string, React.CSSProperties> = {
         color: "var(--text-secondary)",
     },
     metricValue: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 700,
     },
     metricHint: {
         fontSize: 11,
         color: "var(--text-secondary)",
     },
+    chartsRow: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+        gap: 16,
+    },
+    chartCard: {
+        padding: "14px 16px",
+    },
     sectionTitle: {
         fontSize: 15,
         fontWeight: 600,
-        marginBottom: 12,
+        marginBottom: 10,
     },
     chartContainer: {
         display: "flex",
@@ -337,18 +480,28 @@ const styles: Record<string, React.CSSProperties> = {
         gap: 2,
         height: 160,
         padding: "8px 0",
-        borderBottom: "1px solid var(--border-subtle)",
     },
     chartBar: {
         flex: 1,
-        background: "linear-gradient(to top, rgba(37,99,235,0.6), rgba(191,219,254,0.1))",
-        borderRadius: "4px 4px 0 0",
-        minWidth: 4,
+        background:
+            "linear-gradient(to top, rgba(37,99,235,0.75), rgba(191,219,254,0.1))",
+        borderRadius: 999,
+    },
+    chartBarDD: {
+        flex: 1,
+        background:
+            "linear-gradient(to top, rgba(248,113,113,0.8), rgba(254,226,226,0.1))",
+        borderRadius: 999,
     },
     table: {
         width: "100%",
         borderCollapse: "collapse",
         fontSize: 13,
+    },
+    tableSmall: {
+        width: "100%",
+        borderCollapse: "collapse",
+        fontSize: 12,
     },
     headerRow: {
         backgroundColor: "#F9FAFB",
@@ -356,7 +509,7 @@ const styles: Record<string, React.CSSProperties> = {
     },
     th: {
         textAlign: "left",
-        padding: "10px 16px",
+        padding: "8px 12px",
         fontWeight: 600,
         color: "var(--text-secondary)",
     },
@@ -364,7 +517,16 @@ const styles: Record<string, React.CSSProperties> = {
         borderBottom: "1px solid var(--border-subtle)",
     },
     td: {
-        padding: "10px 16px",
+        padding: "8px 12px",
         color: "var(--text-primary)",
+    },
+    mutedText: {
+        fontSize: 13,
+        color: "var(--text-secondary)",
+    },
+    bottomGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: 16,
     },
 };
