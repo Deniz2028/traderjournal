@@ -714,6 +714,8 @@ export const TodayPage: React.FC = () => {
         <div className="page-container">
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                a.nav-button { text-decoration: none !important; color: inherit; }
+                a.nav-button:hover { text-decoration: none !important; }
             `}</style>
 
             {/* Header & Trade List */}
@@ -726,26 +728,28 @@ export const TodayPage: React.FC = () => {
                         </div>
                         <div style={{ display: "flex", gap: 12 }}>
                             <Link href="/morning">
-                                <a style={{
+                                <a className="nav-button" style={{
                                     padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
                                     border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
-                                    display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer"
+                                    display: "flex", alignItems: "center", cursor: "pointer",
+                                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                                 }}>
                                     🌅 Morning Analysis
                                 </a>
                             </Link>
 
                             <Link href={`/eod/${todayISO}`}>
-                                <a style={{
+                                <a className="nav-button" style={{
                                     padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
                                     border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
-                                    display: "flex", alignItems: "center", textDecoration: "none", cursor: "pointer"
+                                    display: "flex", alignItems: "center", cursor: "pointer",
+                                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                                 }}>
                                     🌙 EOD Review
                                 </a>
                             </Link>
 
-                            <button onClick={handleCreateTrade} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>+ Add Trade</button>
+                            <button onClick={handleCreateTrade} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer" }}>+ Add Trade</button>
                         </div>
                     </div>
                     {renderTradeList()}

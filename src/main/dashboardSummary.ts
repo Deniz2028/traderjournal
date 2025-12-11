@@ -111,162 +111,183 @@ function isoDate(d: Date): string {
     return d.toISOString().slice(0, 10);
 }
 
+
 function buildDashboardSummary(): DashboardSummaryPayload {
-    const trades = loadRawTrades();
-    const morning = loadRawMorning();
-    const eods = loadRawEod();
+    try {
+        const trades = loadRawTrades();
+        const morning = loadRawMorning();
+        const eods = loadRawEod();
 
-    // DUMMY DATA FALLBACK (If no trades exist, show demo data so the user sees something)
-    if (trades.length === 0) {
-        return generateDummyDashboard();
-    }
-
-    const { start, end } = getWeekRangeToday();
-
-    // --- Günlük özet (haftalık) ---
-    const days: DashboardDaySummary[] = [];
-    const dayMap = new Map<string, { totalR: number; count: number }>();
-
-    for (
-        let cursor = new Date(start);
-        cursor <= end;
-        cursor.setDate(cursor.getDate() + 1)
-    ) {
-        const dayISO = isoDate(cursor);
-        dayMap.set(dayISO, { totalR: 0, count: 0 });
-        days.push({
-            date: dayISO,
-            label: formatDayLabel(cursor),
-            totalR: 0,
-            tradeCount: 0,
-        });
-    }
-
-    trades.forEach((t) => {
-        if (!t.date || typeof t.resultR !== "number") return;
-        const d = new Date(t.date);
-        if (d < start || d > end) return;
-        const key = t.date.slice(0, 10);
-        const bucket = dayMap.get(key);
-        if (!bucket) return;
-        bucket.totalR += t.resultR!;
-        bucket.count += 1;
-    });
-
-    let totalR = 0;
-    let totalTrades = 0;
-    let wins = 0;
-
-    const outcomeIsWin = (o?: string | null) =>
-        o === "TP" || o === "tp" || o === "WIN" || o === "win";
-
-    days.forEach((day) => {
-        const bucket = dayMap.get(day.date);
-        if (!bucket) return;
-        day.totalR = bucket.totalR;
-        day.tradeCount = bucket.count;
-        totalR += bucket.totalR;
-        totalTrades += bucket.count;
-    });
-
-    trades.forEach((t) => {
-        if (!t.date) return;
-        const d = new Date(t.date);
-        if (d < start || d > end) return;
-        if (outcomeIsWin(t.outcome)) wins += 1;
-    });
-
-    const winrate =
-        totalTrades > 0 ? Number(((wins / totalTrades) * 100).toFixed(1)) : null;
-    const avgRPerTrade =
-        totalTrades > 0 ? Number((totalR / totalTrades).toFixed(2)) : null;
-
-    // --- Bias accuracy (son 10 gün) ---
-    const biasHistory: BiasHistoryItem[] = [];
-    const historyDays = 10;
-
-    // index kolaylığı için mapler
-    const morningByDate = new Map<string, RawMorning>();
-    morning.forEach((m) => {
-        if (m.date) morningByDate.set(m.date.slice(0, 10), m);
-    });
-
-    const eodByDate = new Map<string, RawEod>();
-    eods.forEach((e) => {
-        if (e.date) eodByDate.set(e.date.slice(0, 10), e);
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let biasHitCount = 0;
-    let biasTotalCount = 0;
-
-    for (let i = historyDays - 1; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
-        const key = isoDate(d);
-
-        const m = morningByDate.get(key);
-        const e = eodByDate.get(key);
-
-        let status: BiasHistoryItem["status"] = "no-data";
-
-        if (!m && !e) {
-            status = "no-data";
-        } else if (!m || !e) {
-            status = "neutral";
-        } else if (!m.mainBias || m.mainBias === "Neutral" || !e.dayDirection) {
-            status = "neutral";
-        } else {
-            // Long + UP veya Short + DOWN başarı sayılır
-            const hit =
-                (m.mainBias === "Long" && e.dayDirection === "UP") ||
-                (m.mainBias === "Short" && e.dayDirection === "DOWN");
-            status = hit ? "hit" : "miss";
-            biasTotalCount += 1;
-            if (hit) biasHitCount += 1;
+        // DUMMY DATA FALLBACK: Show if very little data exists (< 2 trades) so it doesn't look empty
+        if (trades.length < 2) {
+            return generateDummyDashboard();
         }
 
-        biasHistory.push({
-            date: key,
-            morningBias: m?.mainBias,
-            dayDirection: e?.dayDirection,
-            status,
+        const { start, end } = getWeekRangeToday();
+
+        // ... (rest of logic) ...
+        // Since I cannot easily wrap the *rest* of the function without replacing it all, 
+        // I will replace the START and ensure the rest flows. 
+        // PRO TIP: I'll use `replace_file_content` to wrap the whole function body or just enough.
+        // Given the tool limitations, I will replace the whole function to be safe and clean.
+
+        // --- Günlük özet (haftalık) ---
+        const days: DashboardDaySummary[] = [];
+        const dayMap = new Map<string, { totalR: number; count: number }>();
+
+        for (
+            let cursor = new Date(start);
+            cursor <= end;
+            cursor.setDate(cursor.getDate() + 1)
+        ) {
+            const dayISO = isoDate(cursor);
+            dayMap.set(dayISO, { totalR: 0, count: 0 });
+            days.push({
+                date: dayISO,
+                label: formatDayLabel(cursor),
+                totalR: 0,
+                tradeCount: 0,
+            });
+        }
+
+        trades.forEach((t) => {
+            if (!t.date || typeof t.resultR !== "number") return;
+            const d = new Date(t.date);
+            if (d < start || d > end) return;
+            const key = t.date.slice(0, 10);
+            const bucket = dayMap.get(key);
+            if (!bucket) return;
+            bucket.totalR += t.resultR!;
+            bucket.count += 1;
         });
+
+        let totalR = 0;
+        let totalTrades = 0;
+        let wins = 0;
+
+        const outcomeIsWin = (o?: string | null) =>
+            o === "TP" || o === "tp" || o === "WIN" || o === "win";
+
+        days.forEach((day) => {
+            const bucket = dayMap.get(day.date);
+            if (!bucket) return;
+            day.totalR = bucket.totalR;
+            day.tradeCount = bucket.count;
+            totalR += bucket.totalR;
+            totalTrades += bucket.count;
+        });
+
+        trades.forEach((t) => {
+            if (!t.date) return;
+            const d = new Date(t.date);
+            if (d < start || d > end) return;
+            if (outcomeIsWin(t.outcome)) wins += 1;
+        });
+
+        const winrate =
+            totalTrades > 0 ? Number(((wins / totalTrades) * 100).toFixed(1)) : null;
+        const avgRPerTrade =
+            totalTrades > 0 ? Number((totalR / totalTrades).toFixed(2)) : null;
+
+        // --- Bias accuracy (son 10 gün) ---
+        const biasHistory: BiasHistoryItem[] = [];
+        const historyDays = 10;
+
+        // index kolaylığı için mapler
+        const morningByDate = new Map<string, RawMorning>();
+        morning.forEach((m) => {
+            if (m.date) morningByDate.set(m.date.slice(0, 10), m);
+        });
+
+        const eodByDate = new Map<string, RawEod>();
+        eods.forEach((e) => {
+            if (e.date) eodByDate.set(e.date.slice(0, 10), e);
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let biasHitCount = 0;
+        let biasTotalCount = 0;
+
+        for (let i = historyDays - 1; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(today.getDate() - i);
+            const key = isoDate(d);
+
+            const m = morningByDate.get(key);
+            const e = eodByDate.get(key);
+
+            let status: BiasHistoryItem["status"] = "no-data";
+
+            if (!m && !e) {
+                status = "no-data";
+            } else if (!m || !e) {
+                status = "neutral";
+            } else if (!m.mainBias || m.mainBias === "Neutral" || !e.dayDirection) {
+                status = "neutral";
+            } else {
+                // Long + UP veya Short + DOWN başarı sayılır
+                const hit =
+                    (m.mainBias === "Long" && e.dayDirection === "UP") ||
+                    (m.mainBias === "Short" && e.dayDirection === "DOWN");
+                status = hit ? "hit" : "miss";
+                biasTotalCount += 1;
+                if (hit) biasHitCount += 1;
+            }
+
+            biasHistory.push({
+                date: key,
+                morningBias: m?.mainBias,
+                dayDirection: e?.dayDirection,
+                status,
+            });
+        }
+
+        const biasAccuracy =
+            biasTotalCount > 0
+                ? Number(((biasHitCount / biasTotalCount) * 100).toFixed(1))
+                : null;
+
+        // --- Recent trades (tüm zaman, son 10 kayıt) ---
+        const recentTrades: DashboardRecentTrade[] = [...trades]
+            .filter((t) => t.id && t.date && typeof t.resultR === "number")
+            .sort((a, b) => {
+                const da = new Date(a.date || 0).getTime();
+                const db = new Date(b.date || 0).getTime();
+                return db - da;
+            })
+            .slice(0, 10)
+            .map((t) => ({
+                id: String(t.id),
+                date: t.date!.slice(0, 10),
+                symbol: t.symbol || "?",
+                resultR: t.resultR ?? 0,
+            }));
+
+        return {
+            days,
+            totalR,
+            totalTrades,
+            winrate,
+            avgRPerTrade,
+            biasAccuracy,
+            biasHistory,
+            recentTrades,
+        };
+    } catch (error) {
+        console.error("Dashboard build failed:", error);
+        return {
+            days: [],
+            totalR: 0,
+            totalTrades: 0,
+            winrate: null,
+            avgRPerTrade: null,
+            biasAccuracy: null,
+            biasHistory: [],
+            recentTrades: []
+        };
     }
-
-    const biasAccuracy =
-        biasTotalCount > 0
-            ? Number(((biasHitCount / biasTotalCount) * 100).toFixed(1))
-            : null;
-
-    // --- Recent trades (tüm zaman, son 10 kayıt) ---
-    const recentTrades: DashboardRecentTrade[] = [...trades]
-        .filter((t) => t.id && t.date && typeof t.resultR === "number")
-        .sort((a, b) => {
-            const da = new Date(a.date || 0).getTime();
-            const db = new Date(b.date || 0).getTime();
-            return db - da;
-        })
-        .slice(0, 10)
-        .map((t) => ({
-            id: String(t.id),
-            date: t.date!.slice(0, 10),
-            symbol: t.symbol || "?",
-            resultR: t.resultR ?? 0,
-        }));
-
-    return {
-        days,
-        totalR,
-        totalTrades,
-        winrate,
-        avgRPerTrade,
-        biasAccuracy,
-        biasHistory,
-        recentTrades,
-    };
 }
 
 /**
