@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import type { FxNewsItem } from "../types/news";
 
 interface NewsAlertState {
     hasAlert: boolean;

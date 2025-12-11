@@ -13,6 +13,7 @@ export interface MorningMtfTimeframeSnapshot {
 }
 
 export interface MorningMtfInstrumentSnapshot {
+    id?: string; // Unique ID for UI lists (UUID)
     symbol: string; // Örn: "XAUUSD"
     dailyBias: MorningMtfBias;
     timeframes: MorningMtfTimeframeSnapshot[];

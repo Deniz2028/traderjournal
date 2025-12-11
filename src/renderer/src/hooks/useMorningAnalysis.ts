@@ -18,7 +18,7 @@ interface UseMorningAnalysisResult {
 
 const STORAGE_KEY = 'trade_journal_morning_analysis_v1';
 
-export function useMorningAnalysis(currentDateISO: string): UseMorningAnalysisResult {
+export function useMorningAnalysis(_currentDateISO: string): UseMorningAnalysisResult {
     const [entries, setEntries] = useState<MorningAnalysisEntry[]>([]);
 
     useEffect(() => {

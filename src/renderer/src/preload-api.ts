@@ -1,4 +1,4 @@
-import type { TjApi, Trade } from "../../preload";
+import type { Trade } from "../../preload";
 import type {
     MorningMtfDaySnapshot,
 } from "../../shared/morningMtfTypes";
@@ -23,6 +23,11 @@ export interface NewsApi {
     getThisWeek(): Promise<import("./types/news").FxNewsItem[]>;
 }
 
+export interface BackupApi {
+    exportData(localStorageData: Record<string, any>): Promise<{ success: boolean; path?: string; error?: string }>;
+    importData(): Promise<{ success: boolean; localStorage?: Record<string, any>; error?: string }>;
+}
+
 export interface Api {
     trades: {
         getForMonth(year: number, month: number): Promise<Trade[]>;
@@ -32,6 +37,10 @@ export interface Api {
     morningMtf: MorningMtfApi;
     eodApi: EODApi;
     news: NewsApi;
+    backup: BackupApi;
+    dashboard: {
+        getSummary(): Promise<any>;
+    };
 }
 
 declare global {

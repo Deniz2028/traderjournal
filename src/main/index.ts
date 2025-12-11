@@ -175,6 +175,17 @@ app.whenReady().then(() => {
         return await runMt5Summary(params);
     });
 
+    // --- Backup & Restore ---
+    const { exportAllData, importAllData } = require("./backupManager");
+
+    ipcMain.handle("backup:export", async (_event, localStorageData) => {
+        return await exportAllData(localStorageData);
+    });
+
+    ipcMain.handle("backup:import", async (_event) => {
+        return await importAllData();
+    });
+
     createWindow()
 
     app.on('activate', function () {

@@ -1,0 +1,17 @@
+appId: com.tradejournal.app
+productName: TradeJournal
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+mac:
+  target: dmg
+  artifactName: ${productName}-${version}-mac.${ext}
+win:
+  target: nsis
+  artifactName: ${productName}-${version}-win.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

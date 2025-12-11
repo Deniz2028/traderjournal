@@ -12,6 +12,22 @@ import type {
 } from "../types/advanced";
 import { getRules } from "../utils/rulesStorage";
 import { generateCoachingAdvice } from "../utils/coachingEngine";
+import {
+    AreaChart,
+    Area,
+    BarChart,
+    Bar,
+    PieChart,
+    Pie,
+    Cell,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend,
+    ReferenceLine,
+    ResponsiveContainer
+} from "recharts";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -160,16 +176,8 @@ export const AdvancedAnalysisPage: React.FC = () => {
             )}
 
             {isDummy && (
-                <div
-                    className="card"
-                    style={{
-                        marginBottom: 12,
-                        borderColor: "#BFDBFE",
-                        background:
-                            "linear-gradient(90deg, rgba(191,219,254,0.3), rgba(219,234,254,0.1))",
-                    }}
-                >
-                    <p style={{ fontSize: 13, color: "#1D4ED8" }}>
+                <div className="alert-info" style={{ marginBottom: 12 }}>
+                    <p>
                         You&apos;re currently seeing <strong>dummy demo data</strong> –
                         on Windows with MT5 + MetaTrader5 Python package, this panel will
                         use your real account history.
@@ -228,22 +236,35 @@ export const AdvancedAnalysisPage: React.FC = () => {
                     {/* Symbol stats */}
                     <div className="card">
                         <h3 style={styles.sectionTitle}>By Symbol</h3>
-                        <SymbolTable symbols={summary.symbols} />
+                        <SymbolChart symbols={summary.symbols} />
+                        <div style={{ marginTop: 24 }}>
+                            <h4 style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 8 }}>Details</h4>
+                            <SymbolTable symbols={summary.symbols} />
+                        </div>
                     </div>
 
                     {/* Session + Hour + Weekday */}
                     <div style={styles.bottomGrid}>
                         <div className="card">
                             <h3 style={styles.sectionTitle}>By Session</h3>
-                            <SessionTable sessions={summary.sessions} />
+                            <SessionChart sessions={summary.sessions} />
+                            <div style={{ marginTop: 16 }}>
+                                <SessionTable sessions={summary.sessions} />
+                            </div>
                         </div>
                         <div className="card">
                             <h3 style={styles.sectionTitle}>By Hour of Day</h3>
-                            <HourTable hours={summary.hours} />
+                            <HourChart hours={summary.hours} />
+                            <div style={{ marginTop: 16 }}>
+                                <HourTable hours={summary.hours} />
+                            </div>
                         </div>
                         <div className="card">
                             <h3 style={styles.sectionTitle}>By Weekday</h3>
-                            <WeekdayTable weekdays={summary.weekdays} />
+                            <WeekdayChart weekdays={summary.weekdays} />
+                            <div style={{ marginTop: 16 }}>
+                                <WeekdayTable weekdays={summary.weekdays} />
+                            </div>
                         </div>
                     </div>
                     {/* Coaching panel */}
@@ -304,27 +325,27 @@ const EquityChart: React.FC<{ points: EquityPoint[] }> = ({ points }) => {
         return <p style={styles.mutedText}>No data.</p>;
     }
 
-    const balances = points.map((p) => p.balance);
-    const minB = Math.min(...balances);
-    const maxB = Math.max(...balances);
-    const range = maxB - minB || 1;
-
     return (
-        <div style={styles.chartContainer}>
-            {points.map((p, idx) => {
-                const normalized = (p.balance - minB) / range;
-                const height = 20 + normalized * 80; // 20% - 100%
-                return (
-                    <div
-                        key={idx}
-                        style={{
-                            ...styles.chartBar,
-                            height: `${height}%`,
-                        }}
-                        title={`${p.time}\nBalance: ${p.balance.toFixed(2)}`}
+        <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+                <AreaChart data={points}>
+                    <defs>
+                        <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563EB" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="time" hide />
+                    <YAxis domain={['auto', 'auto']} fontSize={12} tickFormatter={(val) => val.toFixed(0)} />
+                    <Tooltip
+                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value: number) => [value.toFixed(2), "Balance"]}
+                        labelFormatter={(label) => label.substring(0, 10)}
                     />
-                );
-            })}
+                    <Area type="monotone" dataKey="balance" stroke="#2563EB" fillOpacity={1} fill="url(#colorBalance)" />
+                </AreaChart>
+            </ResponsiveContainer>
         </div>
     );
 };
@@ -334,26 +355,139 @@ const DrawdownChart: React.FC<{ points: DrawdownPoint[] }> = ({ points }) => {
         return <p style={styles.mutedText}>No data.</p>;
     }
 
-    const dds = points.map((p) => p.drawdown);
-    const maxDD = Math.max(...dds);
-    const range = maxDD || 1;
+    const data = points.map(p => ({ ...p, value: -p.drawdown }));
 
     return (
-        <div style={styles.chartContainer}>
-            {points.map((p, idx) => {
-                const normalized = p.drawdown / range;
-                const height = normalized * 100;
-                return (
-                    <div
-                        key={idx}
-                        style={{
-                            ...styles.chartBarDD,
-                            height: `${height}%`,
-                        }}
-                        title={`${p.time}\nDrawdown: ${p.drawdown.toFixed(2)}`}
+        <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+                <AreaChart data={data}>
+                    <defs>
+                        <linearGradient id="colorDD" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#dc2626" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis dataKey="time" hide />
+                    <YAxis fontSize={12} />
+                    <Tooltip
+                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value: number) => [Math.abs(value).toFixed(2), "Drawdown"]}
+                        labelFormatter={(label) => label.substring(0, 10)}
                     />
-                );
-            })}
+                    <Area type="monotone" dataKey="value" stroke="#dc2626" fillOpacity={1} fill="url(#colorDD)" />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const SymbolChart: React.FC<{ symbols: SymbolStat[] }> = ({ symbols }) => {
+    if (!symbols || symbols.length === 0) return null;
+
+    return (
+        <div style={{ width: "100%", height: 300 }}>
+            <ResponsiveContainer>
+                <BarChart data={symbols} layout="vertical" margin={{ left: 40, right: 40 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="symbol" type="category" width={60} fontSize={12} tick={{ fill: "var(--text-secondary)" }} />
+                    <Tooltip
+                        cursor={{ fill: "transparent" }}
+                        contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                        formatter={(value: number) => [value.toFixed(2), "Profit"]}
+                    />
+                    <ReferenceLine x={0} stroke="#9CA3AF" />
+                    <Bar dataKey="profit" radius={[0, 4, 4, 0]} barSize={20}>
+                        {symbols.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#22C55E" : "#EF4444"} />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const SessionChart: React.FC<{ sessions: SessionStat[] }> = ({ sessions }) => {
+    if (!sessions || sessions.length === 0) return null;
+
+    const data = sessions.filter(s => s.trades > 0);
+    const COLORS = ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981"];
+
+    return (
+        <div style={{ width: "100%", height: 200 }}>
+            <ResponsiveContainer>
+                <PieChart>
+                    <Pie
+                        data={data as any[]}
+                        dataKey="trades"
+                        nameKey="session"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={5}
+                    >
+                        {data.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const HourChart: React.FC<{ hours: HourStat[] }> = ({ hours }) => {
+    if (!hours || hours.length === 0) return null;
+
+    return (
+        <div style={{ width: "100%", height: 180 }}>
+            <ResponsiveContainer>
+                <BarChart data={hours}>
+                    <XAxis dataKey="hour" fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip
+                        cursor={{ fill: "#F3F4F6" }}
+                        contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                        formatter={(value: number) => [value.toFixed(2), "Profit"]}
+                        labelFormatter={(label) => `${label}:00`}
+                    />
+                    <ReferenceLine y={0} stroke="#E5E7EB" />
+                    <Bar dataKey="profit">
+                        {hours.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#3B82F6" : "#EF4444"} />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const WeekdayChart: React.FC<{ weekdays: WeekdayStat[] }> = ({ weekdays }) => {
+    if (!weekdays || weekdays.length === 0) return null;
+
+    return (
+        <div style={{ width: "100%", height: 180 }}>
+            <ResponsiveContainer>
+                <BarChart data={weekdays}>
+                    <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} />
+                    <Tooltip
+                        cursor={{ fill: "#F3F4F6" }}
+                        contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}
+                        formatter={(value: number) => [value.toFixed(2), "Profit"]}
+                    />
+                    <ReferenceLine y={0} stroke="#E5E7EB" />
+                    <Bar dataKey="profit" radius={[4, 4, 0, 0]}>
+                        {weekdays.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? "#10B981" : "#EF4444"} />
+                        ))}
+                    </Bar>
+                </BarChart>
+            </ResponsiveContainer>
         </div>
     );
 };
@@ -487,6 +621,8 @@ const styles: Record<string, React.CSSProperties> = {
         border: "1px solid var(--border-subtle)",
         fontSize: 13,
         fontFamily: "inherit",
+        backgroundColor: "var(--bg-input)",
+        color: "var(--text-primary)",
     },
     fetchBtn: {
         backgroundColor: "var(--accent-primary)",
@@ -562,7 +698,7 @@ const styles: Record<string, React.CSSProperties> = {
         fontSize: 12,
     },
     headerRow: {
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "var(--bg-secondary)",
         borderBottom: "1px solid var(--border-subtle)",
     },
     th: {

@@ -1,12 +1,17 @@
 // src/renderer/src/pages/DashboardPage.tsx
 import React, { useEffect, useState } from "react";
+import {
+    BarChart,
+    Bar,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
+    ReferenceLine,
+    Cell
+} from "recharts";
 
-// Browser’da global window.api tipi yoksa derleyici kızmasın diye:
-declare global {
-    interface Window {
-        api?: any;
-    }
-}
 
 type BiasStatus = "hit" | "miss" | "neutral" | "no-data";
 
@@ -40,6 +45,7 @@ interface DashboardSummary {
     biasAccuracy: number | null;
     biasHistory: BiasHistoryItem[];
     recentTrades: DashboardRecentTrade[];
+    isDemoMode?: boolean;
 }
 
 export const DashboardPage: React.FC = () => {
@@ -96,6 +102,21 @@ export const DashboardPage: React.FC = () => {
 
             {!loading && data && (
                 <>
+                    {/* Demo Warning */}
+                    {data.isDemoMode && (
+                        <div className="card" style={{ marginBottom: 24, padding: "12px 16px", backgroundColor: "#FEFCE8", border: "1px solid #FEF08A" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <span style={{ fontSize: 20 }}>🚧</span>
+                                <div>
+                                    <strong style={{ fontSize: 13, color: "#854D0E" }}>DEMO MODE: Showing Sample Data</strong>
+                                    <p style={{ fontSize: 12, color: "#A16207", margin: 0 }}>
+                                        Add at least 2 trades to see your real data.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Top KPI row */}
                     <div style={styles.kpiRow}>
                         <div className="card" style={styles.kpiCard}>
@@ -145,6 +166,26 @@ export const DashboardPage: React.FC = () => {
                     {/* Weekly bar row */}
                     <div style={{ marginTop: 24 }}>
                         <h3 style={styles.sectionTitle}>Week by day</h3>
+                        <div className="card" style={{ marginBottom: 16, height: 200, padding: "16px 24px" }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data.days}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                    <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip
+                                        cursor={{ fill: 'transparent' }}
+                                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value: number) => [value.toFixed(2) + " R", "PnL"]}
+                                    />
+                                    <ReferenceLine y={0} stroke="#9CA3AF" />
+                                    <Bar dataKey="totalR" radius={[4, 4, 0, 0]}>
+                                        {data.days.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.totalR >= 0 ? "#22C55E" : "#EF4444"} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                         <div style={styles.weekRow}>
                             {data.days.map((day) => (
                                 <div key={day.date} className="card" style={styles.dayCard}>

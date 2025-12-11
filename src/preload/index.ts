@@ -51,7 +51,14 @@ const api = {
         listDays: () => ipcRenderer.invoke("journal:morning:listDays"),
     },
     news: {
-        getThisWeek: () => ipcRenderer.invoke("news:getThisWeek")
+        getThisWeek: () => ipcRenderer.invoke("news:getThisWeek"),
+    },
+    mt5: {
+        getSummary: (params: any) => ipcRenderer.invoke("mt5:getSummary", params), // { dateFrom, dateTo }
+    },
+    backup: {
+        exportData: (localStorageData: any) => ipcRenderer.invoke("backup:export", localStorageData),
+        importData: () => ipcRenderer.invoke("backup:import"),
     },
     dashboard: {
         getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),

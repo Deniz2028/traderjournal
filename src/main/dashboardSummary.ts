@@ -53,6 +53,7 @@ export interface DashboardSummaryPayload {
     biasAccuracy: number | null;  // 0–100, null = veri yok
     biasHistory: BiasHistoryItem[];
     recentTrades: DashboardRecentTrade[];
+    isDemoMode?: boolean;         // New flag
 }
 
 /**
@@ -274,6 +275,7 @@ function buildDashboardSummary(): DashboardSummaryPayload {
             biasAccuracy,
             biasHistory,
             recentTrades,
+            isDemoMode: false, // REAL DATA
         };
     } catch (error) {
         console.error("Dashboard build failed:", error);
@@ -285,7 +287,8 @@ function buildDashboardSummary(): DashboardSummaryPayload {
             avgRPerTrade: null,
             biasAccuracy: null,
             biasHistory: [],
-            recentTrades: []
+            recentTrades: [],
+            isDemoMode: false
         };
     }
 }
@@ -301,6 +304,7 @@ export function registerDashboardIpc() {
 
 function generateDummyDashboard(): DashboardSummaryPayload {
     return {
+        isDemoMode: true, // DUMMY DATA
         days: [
             { date: "2025-12-08", label: "Mon", totalR: 2.5, tradeCount: 3 },
             { date: "2025-12-09", label: "Tue", totalR: -1.0, tradeCount: 2 },

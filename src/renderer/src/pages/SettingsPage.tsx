@@ -245,6 +245,82 @@ export const SettingsPage: React.FC = () => {
         </div>
 
 
+
+        {/* Backup & Restore */}
+        <div style={{ marginTop: 40, borderTop: "1px solid var(--border-subtle)", paddingTop: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Data Backup & Restore</h2>
+          <div className="card">
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Export / Import Data</h3>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+              Save all your data (Trades, Journal, Settings, Rules) to a single JSON file, or restore from a backup.
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const ls: Record<string, any> = {};
+                    for (let i = 0; i < localStorage.length; i++) {
+                      const key = localStorage.key(i);
+                      if (key) ls[key] = localStorage.getItem(key);
+                    }
+                    const res = await window.api.backup.exportData(ls);
+                    if (res.success) {
+                      alert(`Backup saved to: ${res.path}`);
+                    } else if (res.error) {
+                      alert(`Export failed: ${res.error}`);
+                    }
+                  } catch (e) {
+                    alert(`Export failed: ${e}`);
+                  }
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "var(--bg-card)",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  fontWeight: 500
+                }}
+              >
+                📥 Export Data
+              </button>
+
+              <button
+                onClick={async () => {
+                  if (!confirm("This will OVERWRITE all current data. Are you sure?")) return;
+                  try {
+                    const res = await window.api.backup.importData();
+                    if (res.success && res.localStorage) {
+                      // Update LocalStorage
+                      Object.entries(res.localStorage).forEach(([k, v]) => {
+                        localStorage.setItem(k, v as string);
+                      });
+                      alert("Restore successful! The app will now reload.");
+                      window.location.reload();
+                    } else if (res.error) {
+                      alert(`Import failed: ${res.error}`);
+                    }
+                  } catch (e) {
+                    alert(`Import failed: ${e}`);
+                  }
+                }}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border-subtle)",
+                  backgroundColor: "var(--bg-card)",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  fontWeight: 500
+                }}
+              >
+                📤 Import Data
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginTop: 40, borderTop: "1px solid var(--border-subtle)", paddingTop: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Developer / Simulation</h2>
           <div className="card">
@@ -279,6 +355,40 @@ export const SettingsPage: React.FC = () => {
                 {isSimulationMode() ? "Disable Simulation" : "Enable Simulation"}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div style={{ marginTop: 40, borderTop: "1px solid var(--color-red)", paddingTop: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16, color: "var(--color-red)" }}>Danger Zone</h2>
+          <div className="card" style={{ border: "1px solid #FECACA", backgroundColor: "#FEF2F2" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: "#DC2626" }}>Reset All Data</h3>
+            <p style={{ fontSize: 13, color: "#7F1D1D", marginBottom: 16 }}>
+              This will permanently delete ALL data (Journal, Morning Analysis, EOD Reviews, Rules, Settings, etc.).
+              This action cannot be undone.
+            </p>
+            <button
+              onClick={() => {
+                if (confirm("ARE YOU SURE? This will wipe EVERYTHING. Types 'yes' to confirm not needed, just click OK.")) {
+                  if (confirm("Really? Last chance to cancel.")) {
+                    window.localStorage.clear();
+                    window.location.reload();
+                  }
+                }
+              }}
+              style={{
+                backgroundColor: "#DC2626",
+                color: "#FFFFFF",
+                padding: "8px 24px",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "none"
+              }}
+            >
+              Reset Everything
+            </button>
           </div>
         </div>
       </div>

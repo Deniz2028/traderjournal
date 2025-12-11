@@ -105,7 +105,10 @@ export const RulesPage: React.FC = () => {
                         padding: "8px 10px",
                         borderRadius: 6,
                         border: "1px solid var(--border-subtle)",
+
                         fontSize: 13,
+                        backgroundColor: "var(--bg-input)",
+                        color: "var(--text-primary)"
                     }}
                     placeholder="Örn: Plan dışı saatlerde işlem açma"
                     value={newLabel}
@@ -162,6 +165,8 @@ export const RulesPage: React.FC = () => {
                                     border: "1px solid var(--border-subtle)",
                                     fontSize: 13,
                                     fontWeight: 500,
+                                    backgroundColor: "var(--bg-input)",
+                                    color: "var(--text-primary)"
                                 }}
                                 value={rule.label}
                                 onChange={(e) => handleLabelChange(rule.id, e.target.value)}
@@ -174,6 +179,9 @@ export const RulesPage: React.FC = () => {
                                     fontSize: 12,
                                     resize: "vertical",
                                     minHeight: 40,
+                                    backgroundColor: "var(--bg-input)",
+                                    color: "var(--text-primary)",
+                                    fontFamily: "inherit"
                                 }}
                                 placeholder="İstersen bu kuralı biraz daha detaylandır..."
                                 value={rule.description ?? ""}
@@ -207,7 +215,10 @@ export const RulesPage: React.FC = () => {
                                     padding: "4px 8px",
                                     borderRadius: 6,
                                     border: "1px solid var(--border-subtle)",
+
                                     fontSize: 12,
+                                    backgroundColor: "var(--bg-input)",
+                                    color: "var(--text-primary)"
                                 }}
                             >
                                 {[1, 2, 3, 4, 5].map((w) => (
@@ -222,8 +233,8 @@ export const RulesPage: React.FC = () => {
                                 style={{
                                     marginTop: 8,
                                     fontSize: 11,
-                                    color: "#B91C1C",
-                                    backgroundColor: "#FEE2E2",
+                                    color: "#EF4444",
+                                    backgroundColor: "var(--bg-red-subtle)",
                                     padding: "4px 8px",
                                     borderRadius: 6,
                                 }}

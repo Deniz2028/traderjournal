@@ -1,6 +1,7 @@
 :root {
   /* Theme Colors */
-  --bg-app: #F5F7FB;       /* Very light cool gray */
+  --bg-app: #F5F7FB;
+  /* Very light cool gray */
   --bg-sidebar: #FFFFFF;
   --bg-card: #FFFFFF;
 
@@ -21,6 +22,98 @@
 
   /* Layout */
   --sidebar-width: 240px;
+
+  /* Component Colors */
+  --bg-secondary: #F9FAFB;
+  --bg-today: #F0F9FF;
+  --bg-element: #F3F4F6;
+  --bg-nav-active: #F3F4F6;
+
+  /* Pill Colors */
+  --pill-blue-bg: #EFF6FF;
+  --pill-blue-text: #2563EB;
+  --pill-teal-bg: #F0FDFA;
+  --pill-teal-text: #0F766E;
+
+  /* Form Elements */
+  --bg-input: #FFFFFF;
+  --border-input: #E5E7EB;
+  /* Form Elements */
+  --bg-input: #FFFFFF;
+  --border-input: #E5E7EB;
+
+  /* Subtle Status Backgrounds */
+  --bg-long-subtle: #DCFCE7;
+  --bg-short-subtle: #FEE2E2;
+  --bg-neutral-subtle: #F3F4F6;
+  --bg-red-subtle: #FEE2E2;
+}
+
+[data-theme='dark'] {
+  /* Theme Colors */
+  --bg-app: #111827;
+  /* Gray 900 */
+  --bg-sidebar: #1F2937;
+  /* Gray 800 */
+  --bg-card: #1F2937;
+  /* Gray 800 */
+
+  /* Borders & Lines */
+  --border-subtle: #374151;
+  /* Gray 700 */
+
+  /* Typography */
+  --text-primary: #F9FAFB;
+  /* Gray 50 */
+  --text-secondary: #9CA3AF;
+  /* Gray 400 */
+
+  /* Accents */
+  --accent-primary: #3B82F6;
+  /* Blue 500 (slighly lighter than light mode) */
+  /* Accents */
+  --accent-primary: #3B82F6;
+  /* Blue 500 */
+  --accent-hover: #374151;
+  /* Gray 700 */
+
+  /* Component Colors */
+  --bg-secondary: #111827;
+  /* Gray 900 (same as app, or slightly different) */
+  --bg-today: rgba(56, 189, 248, 0.15);
+  /* Sky with opacity */
+  --bg-element: #374151;
+  /* Gray 700 */
+  --bg-nav-active: #374151;
+  /* Gray 700 */
+
+  /* Pill Colors */
+  --pill-blue-bg: rgba(59, 130, 246, 0.2);
+  --pill-blue-text: #93C5FD;
+  --pill-teal-bg: rgba(20, 184, 166, 0.2);
+  --pill-teal-text: #5EEAD4;
+  /* Pill Colors */
+  --pill-blue-bg: rgba(59, 130, 246, 0.2);
+  --pill-blue-text: #93C5FD;
+  --pill-teal-bg: rgba(20, 184, 166, 0.2);
+  --pill-teal-text: #5EEAD4;
+
+  /* Form Elements */
+  --bg-input: #374151;
+  /* Gray 700 */
+  --border-input: #4B5563;
+  /* Gray 600 */
+  /* Form Elements */
+  --bg-input: #374151;
+  /* Gray 700 */
+  --border-input: #4B5563;
+  /* Gray 600 */
+
+  /* Subtle Status Backgrounds */
+  --bg-long-subtle: rgba(22, 163, 74, 0.2);
+  --bg-short-subtle: rgba(220, 38, 38, 0.2);
+  --bg-neutral-subtle: rgba(75, 85, 99, 0.2);
+  --bg-red-subtle: rgba(220, 38, 38, 0.2);
 }
 
 * {
@@ -35,7 +128,8 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-size: 14px;
-  overflow: hidden; /* App handles scroll internally */
+  overflow: hidden;
+  /* App handles scroll internally */
 }
 
 /* Layout Wrappers */
@@ -44,12 +138,94 @@ body {
   display: flex;
   height: 100vh;
   width: 100vw;
+  position: relative;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1;
   overflow-y: auto;
   padding: 32px;
+  width: 100%;
+  transition: margin-left 0.3s ease;
+}
+
+/* Sidebar Responsive Styles */
+.sidebar {
+  width: var(--sidebar-width);
+  height: 100%;
+  background-color: var(--bg-sidebar);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, width 0.3s ease;
+  z-index: 50;
+}
+
+/* Mobile Sidebar Overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Mobile Toggle Button */
+.mobile-menu-btn {
+  display: none;
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 60;
+  padding: 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: var(--text-primary);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    padding: 16px;
+    padding-top: 64px;
+    /* Space for mobile header/button */
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* Page Header */
@@ -68,6 +244,34 @@ body {
 .page-subtitle {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+/* Alerts */
+.alert-info {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E40AF;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.trade-row {
+  transition: background-color 0.2s;
+}
+
+.trade-row:hover {
+  background-color: #F9FAFB;
+}
+
+[data-theme='dark'] .trade-row:hover {
+  background-color: var(--bg-element);
+}
+
+[data-theme='dark'] .alert-info {
+  background-color: rgba(30, 64, 175, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #93C5FD;
 }
 
 /* Card */

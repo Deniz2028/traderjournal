@@ -1,6 +1,6 @@
 
 // src/renderer/src/pages/MorningAnalysisPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRoute } from "wouter";
 
 import {
@@ -12,7 +12,6 @@ import type {
     MorningMtfDaySnapshot,
     MorningMtfInstrumentSnapshot,
     MorningMtfTimeframeId,
-    MorningMtfTimeframeSnapshot,
 } from "../../../shared/morningMtfTypes";
 
 type Bias = MorningMtfBias;
@@ -56,6 +55,7 @@ const MorningAnalysisPage: React.FC = () => {
 
     const handleAddInstrument = () => {
         const newInst: MorningMtfInstrumentSnapshot = {
+            id: crypto.randomUUID(),
             symbol: "",
             dailyBias: "neutral",
             timeframes: [
@@ -64,7 +64,12 @@ const MorningAnalysisPage: React.FC = () => {
                 { tf: "5M", chartUrl: "", bias: "neutral", notes: "" },
             ],
         };
-        setSnapshot(prev => prev ? { ...prev, instruments: [...prev.instruments, newInst] } : null);
+        setSnapshot(prev => {
+            if (!prev) return null;
+            const updated = { ...prev, instruments: [...prev.instruments, newInst] };
+            saveMorningForDate(updated).catch(console.error); // Auto-save
+            return updated;
+        });
     };
 
     // Close lightbox on ESC
@@ -83,7 +88,15 @@ const MorningAnalysisPage: React.FC = () => {
     useEffect(() => {
         fetchMorningForDate(dateISO).then((existing) => {
             if (existing) {
-                setSnapshot(existing);
+                // Ensure IDs exist
+                const patched = {
+                    ...existing,
+                    instruments: existing.instruments.map(i => ({
+                        ...i,
+                        id: i.id || crypto.randomUUID()
+                    }))
+                };
+                setSnapshot(patched);
             } else {
                 // Default to empty list as per user request
                 setSnapshot({ date: dateISO, instruments: [] });
@@ -139,7 +152,9 @@ const MorningAnalysisPage: React.FC = () => {
             newInstruments[index] = newInstruments[targetIndex];
             newInstruments[targetIndex] = temp;
 
-            return { ...prev, instruments: newInstruments };
+            const updated = { ...prev, instruments: newInstruments };
+            saveMorningForDate(updated).catch(console.error); // Auto-save on move
+            return updated;
         });
     };
 
@@ -212,17 +227,18 @@ const MorningAnalysisPage: React.FC = () => {
                     };
 
                     const handleDelete = () => {
-                        if (confirm("Remove this instrument?")) {
-                            setSnapshot((prev) => {
-                                if (!prev) return prev;
-                                const newInst = prev.instruments.filter((_, i) => i !== index);
-                                return { ...prev, instruments: newInst };
-                            });
-                        }
+                        // Direct delete, no confirm (undo better, but for now simple)
+                        setSnapshot((prev) => {
+                            if (!prev) return prev;
+                            const newInst = prev.instruments.filter((i) => i.id !== inst.id);
+                            const updated = { ...prev, instruments: newInst };
+                            saveMorningForDate(updated).catch(console.error); // Auto-save
+                            return updated;
+                        });
                     };
 
                     return (
-                        <div key={index} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div key={inst.id || index} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
                             {/* Header */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
                                 <div style={{ display: "flex", gap: 8 }}>
@@ -267,7 +283,8 @@ const MorningAnalysisPage: React.FC = () => {
                                                 }}
                                                 style={{
                                                     fontSize: 14, fontWeight: 600, padding: "8px", width: "100%",
-                                                    borderRadius: 6, border: "1px solid var(--accent-primary)", outline: "none"
+                                                    borderRadius: 6, border: "1px solid var(--accent-primary)", outline: "none",
+                                                    backgroundColor: "var(--bg-input)", color: "var(--text-primary)"
                                                 }}
                                             >
                                                 <option value="">Select Instrument...</option>
@@ -321,7 +338,8 @@ const MorningAnalysisPage: React.FC = () => {
                                                                 ? "1px solid var(--accent-primary)"
                                                                 : "1px solid var(--border-subtle)",
                                                         backgroundColor:
-                                                            inst.dailyBias === b ? "#EEF2FF" : "#FFFFFF",
+                                                            inst.dailyBias === b ? (b === 'long' ? 'var(--bg-long-subtle)' : b === 'short' ? 'var(--bg-short-subtle)' : 'var(--bg-neutral-subtle)') : "var(--bg-card)",
+                                                        color: "var(--text-primary)",
                                                         cursor: "pointer",
                                                     }}
                                                 >
@@ -375,7 +393,8 @@ const MorningAnalysisPage: React.FC = () => {
                                                 border: isActive
                                                     ? "1px solid var(--accent-primary)"
                                                     : "1px solid var(--border-subtle)",
-                                                backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
+                                                backgroundColor: isActive ? "var(--bg-element)" : "var(--bg-card)",
+                                                color: "var(--text-primary)",
                                                 cursor: "pointer",
                                                 whiteSpace: "nowrap"
                                             }}
@@ -402,6 +421,8 @@ const MorningAnalysisPage: React.FC = () => {
                                         border: "1px solid var(--border-subtle)",
                                         fontSize: 13,
                                         fontFamily: "inherit",
+                                        backgroundColor: "var(--bg-input)",
+                                        color: "var(--text-primary)"
                                     }}
                                 />
 
@@ -424,7 +445,7 @@ const MorningAnalysisPage: React.FC = () => {
                                                 maxHeight: 400,
                                                 objectFit: "contain",
                                                 display: "block",
-                                                backgroundColor: "#f9fafb"
+                                                backgroundColor: "var(--bg-page)"
                                             }}
                                         />
                                     </div>
@@ -449,7 +470,8 @@ const MorningAnalysisPage: React.FC = () => {
                                                     border: isActive
                                                         ? "1px solid var(--accent-primary)"
                                                         : "1px solid var(--border-subtle)",
-                                                    backgroundColor: isActive ? "#EEF2FF" : "#FFFFFF",
+                                                    backgroundColor: isActive ? "var(--bg-element)" : "var(--bg-card)",
+                                                    color: "var(--text-primary)",
                                                     cursor: "pointer",
                                                 }}
                                             >
@@ -477,6 +499,8 @@ const MorningAnalysisPage: React.FC = () => {
                                         resize: "vertical",
                                         fontSize: 13,
                                         fontFamily: "inherit",
+                                        backgroundColor: "var(--bg-input)",
+                                        color: "var(--text-primary)"
                                     }}
                                 />
                             </div>

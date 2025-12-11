@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { FxNewsItem } from "../types/news";
 
 // FF JSON source
-const FEED_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json";
+
 
 interface NormalizedNewsItem {
     id: string;
@@ -333,7 +333,7 @@ export const NewsPanel: React.FC = () => {
                                     <tr
                                         style={{
                                             borderBottom: "1px solid var(--border-subtle)",
-                                            backgroundColor: "#F9FAFB",
+                                            backgroundColor: "var(--bg-secondary)",
                                         }}
                                     >
                                         <th

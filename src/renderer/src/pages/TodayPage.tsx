@@ -163,7 +163,8 @@ export const TodayPage: React.FC = () => {
                             padding: "6px 12px",
                             borderRadius: 999,
                             border: active ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
-                            backgroundColor: active ? "#EFF6FF" : "#FFFFFF",
+                            backgroundColor: active ? "var(--bg-element)" : "var(--bg-card)",
+                            color: "var(--text-primary)",
                             fontSize: 13,
                             fontWeight: 500,
                         }}
@@ -231,9 +232,8 @@ export const TodayPage: React.FC = () => {
                                 <tr
                                     key={trade.id}
                                     onClick={() => handleSelectTrade(trade)}
+                                    className="trade-row"
                                     style={{ borderBottom: "1px solid var(--border-subtle)", cursor: "pointer" }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#F9FAFB"}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
                                 >
                                     <td style={{ padding: "12px 8px", fontWeight: 500 }}>{trade.symbol}</td>
                                     <td style={{ padding: "12px 8px" }}>
@@ -315,9 +315,9 @@ export const TodayPage: React.FC = () => {
                                 let borderColor = "var(--border-subtle)";
                                 let bg = "#FFFFFF";
 
-                                if (b === "Long") { color = "#16A34A"; borderColor = isActive ? "#16A34A" : "var(--border-subtle)"; bg = isActive ? "#DCFCE7" : "#FFFFFF"; }
-                                if (b === "Short") { color = "#DC2626"; borderColor = isActive ? "#DC2626" : "var(--border-subtle)"; bg = isActive ? "#FEE2E2" : "#FFFFFF"; }
-                                if (b === "Neutral") { color = "#4B5563"; borderColor = isActive ? "#9CA3AF" : "var(--border-subtle)"; bg = isActive ? "#F3F4F6" : "#FFFFFF"; }
+                                if (b === "Long") { color = "#16A34A"; borderColor = isActive ? "#16A34A" : "var(--border-subtle)"; bg = isActive ? "#DCFCE7" : "var(--bg-card)"; }
+                                if (b === "Short") { color = "#DC2626"; borderColor = isActive ? "#DC2626" : "var(--border-subtle)"; bg = isActive ? "#FEE2E2" : "var(--bg-card)"; }
+                                if (b === "Neutral") { color = "var(--text-primary)"; borderColor = isActive ? "#9CA3AF" : "var(--border-subtle)"; bg = isActive ? "var(--bg-element)" : "var(--bg-card)"; }
 
                                 return (
                                     <button
@@ -362,7 +362,8 @@ export const TodayPage: React.FC = () => {
                                 borderRadius: 8,
                                 border: "1px solid var(--border-subtle)",
                                 fontSize: 13,
-                                backgroundColor: "#FFFFFF"
+                                backgroundColor: "var(--bg-input)",
+                                color: "var(--text-primary)"
                             }}
                         >
                             {allSymbols.map(s => (
@@ -378,8 +379,9 @@ export const TodayPage: React.FC = () => {
                                 onClick={() => setActiveFrameId(f.id)}
                                 style={{
                                     padding: "6px 14px", borderRadius: 999, fontSize: 13, fontWeight: 500,
-                                    border: f.id === activeFrameId ? "1px solid #FB923C" : "1px solid var(--border-subtle)",
-                                    backgroundColor: f.id === activeFrameId ? "#FFF7ED" : "#FFFFFF",
+                                    border: f.id === activeFrameId ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                                    backgroundColor: f.id === activeFrameId ? "var(--bg-element)" : "var(--bg-card)",
+                                    color: "var(--text-primary)"
                                 }}
                             >
                                 {f.timeframe}
@@ -395,7 +397,7 @@ export const TodayPage: React.FC = () => {
                             value={activeFrame.link}
                             onChange={(e) => updateFrame(activeFrame.id, { link: e.target.value })}
                             placeholder="TradingView snapshot URL..."
-                            style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 12 }}
+                            style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 12, backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }}
                         />
                         {renderChartPreview(activeFrame.link, `${activeTrade.symbol} ${activeFrame.timeframe} plan`)}
                     </div>
@@ -410,7 +412,7 @@ export const TodayPage: React.FC = () => {
                                 value={activeFrame.notes}
                                 onChange={(e) => updateFrame(activeFrame.id, { notes: e.target.value })}
                                 rows={10}
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, resize: "vertical", flex: 1 }}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, resize: "vertical", flex: 1, backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }}
                             />
                         </div>
                         {/* Save Button integrated here */}
@@ -439,7 +441,7 @@ export const TodayPage: React.FC = () => {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
                         <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Trade Bias</span>
-                        <span style={{ padding: "4px 10px", borderRadius: 999, border: "1px solid var(--border-subtle)", backgroundColor: "#F3F4F6", fontSize: 12, fontWeight: 600 }}>
+                        <span style={{ padding: "4px 10px", borderRadius: 999, border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-element)", fontSize: 12, fontWeight: 600 }}>
                             {activeTrade.tradeBias}
                         </span>
                     </div>
@@ -456,7 +458,7 @@ export const TodayPage: React.FC = () => {
                 </div>
 
                 <div style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}>
-                    <button onClick={() => setViewMode("editingPre")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", fontSize: 13 }}>Edit plan</button>
+                    <button onClick={() => setViewMode("editingPre")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)", fontSize: 13 }}>Edit plan</button>
                     <div>
                         <button onClick={(e) => handleDeleteTrade(e, activeTrade.id)} style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer", marginRight: 16 }}>Delete</button>
                         <button onClick={() => setViewMode("editingPost")} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500 }}>Trade closed → Review</button>
@@ -479,9 +481,9 @@ export const TodayPage: React.FC = () => {
                         <p style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: 24 }}>{activeTrade.symbol}</p>
                     </div>
                     <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                        <button onClick={() => setViewMode("preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", fontSize: 12, color: "var(--text-secondary)" }}>View Plan</button>
+                        <button onClick={() => setViewMode("preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", fontSize: 12, color: "var(--text-secondary)" }}>View Plan</button>
                         <button onClick={(e) => handleDeleteTrade(e, activeTrade.id)} style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer" }}>Delete</button>
-                        <button onClick={() => setViewMode(hasPostReview(activeTrade) ? "postSummary" : "preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", fontSize: 12 }}>Cancel</button>
+                        <button onClick={() => setViewMode(hasPostReview(activeTrade) ? "postSummary" : "preSummary")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)", fontSize: 12 }}>Cancel</button>
                     </div>
                 </div>
 
@@ -489,7 +491,7 @@ export const TodayPage: React.FC = () => {
                     {/* Left Column: Chart - Takes full remaining height */}
                     <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
                         <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Exit chart link</label>
-                        <input value={activeTrade.exitLink ?? ""} onChange={(e) => updateActiveTrade({ exitLink: e.target.value })} placeholder="TradingView snapshot URL..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 8 }} />
+                        <input value={activeTrade.exitLink ?? ""} onChange={(e) => updateActiveTrade({ exitLink: e.target.value })} placeholder="TradingView snapshot URL..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, marginBottom: 8, backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }} />
 
                         <div
                             style={{
@@ -525,7 +527,7 @@ export const TodayPage: React.FC = () => {
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", display: "block", marginBottom: 4 }}>Result (R)</label>
-                                <input value={resultRInput} onChange={(e) => setResultRInput(e.target.value)} placeholder="0.0" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13 }} />
+                                <input value={resultRInput} onChange={(e) => setResultRInput(e.target.value)} placeholder="0.0" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", fontSize: 13, backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }} />
                             </div>
                         </div>
 
@@ -542,7 +544,9 @@ export const TodayPage: React.FC = () => {
                                 resize: "none",
                                 flex: 1,
                                 marginBottom: 16,
-                                fontFamily: "inherit"
+                                fontFamily: "inherit",
+                                backgroundColor: "var(--bg-input)",
+                                color: "var(--text-primary)"
                             }}
                         />
 
@@ -582,7 +586,7 @@ export const TodayPage: React.FC = () => {
                     {/* Right: Actions */}
                     <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "flex-end" }}>
                         <button onClick={(e) => handleDeleteTrade(e, activeTrade.id)} style={{ color: "#EF4444", background: "none", border: "none", fontSize: 12, cursor: "pointer" }}>Delete</button>
-                        <button onClick={() => setViewMode("editingPost")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "#F3F4F6", fontSize: 12 }}>Edit Review</button>
+                        <button onClick={() => setViewMode("editingPost")} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)", fontSize: 12 }}>Edit Review</button>
 
                         <button
                             onClick={handleBackToList}
@@ -609,7 +613,7 @@ export const TodayPage: React.FC = () => {
                 <div style={{
                     display: "flex",
                     gap: 16,
-                    backgroundColor: "#F9FAFB",
+                    backgroundColor: "var(--bg-secondary)",
                     borderRadius: 8,
                     padding: 12,
                     border: "1px solid var(--border-subtle)",
@@ -638,7 +642,7 @@ export const TodayPage: React.FC = () => {
                     {/* Notes Area - Expanding to fill rest */}
                     <div style={{ flex: 1, minHeight: 60 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 4, textTransform: "uppercase" }}>Notes</div>
-                        <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.4, color: "#374151" }}>
+                        <div style={{ whiteSpace: "pre-wrap", fontSize: 13, lineHeight: 1.4, color: "var(--text-primary)" }}>
                             {activeTrade.exitNotes || <span style={{ color: "var(--text-secondary)", fontStyle: "italic" }}>No notes added.</span>}
                         </div>
                     </div>
@@ -729,7 +733,7 @@ export const TodayPage: React.FC = () => {
                         <div style={{ display: "flex", gap: 12 }}>
                             <Link href="/morning" className="nav-button" style={{
                                 padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                                border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
+                                border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)",
                                 display: "flex", alignItems: "center", cursor: "pointer",
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                             }}>
@@ -738,7 +742,7 @@ export const TodayPage: React.FC = () => {
 
                             <Link href={`/eod/${todayISO}`} className="nav-button" style={{
                                 padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                                border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
+                                border: "1px solid var(--border-subtle)", backgroundColor: "var(--bg-card)", color: "var(--text-primary)",
                                 display: "flex", alignItems: "center", cursor: "pointer",
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
                             }}>

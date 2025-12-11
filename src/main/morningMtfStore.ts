@@ -8,7 +8,7 @@ interface MorningMtfStoreFile {
     [date: string]: MorningMtfDaySnapshot;
 }
 
-function getFilePath() {
+export function getFilePath() {
     const userData = app.getPath("userData");
     return path.join(userData, "morning_mtf.json");
 }

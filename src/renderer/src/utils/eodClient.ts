@@ -1,7 +1,7 @@
 import type { EODApi } from "../preload-api";
 
 function getApi(): EODApi {
-    // @ts-expect-error - global injected
+    // global injected
     return window.api.eodApi;
 }
 

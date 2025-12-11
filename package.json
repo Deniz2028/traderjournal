@@ -21,6 +21,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "electron-updater": "^6.1.7",
     "lucide-react": "^0.559.0",
+    "recharts": "^3.5.1",
     "wouter": "^3.8.1"
   },
   "devDependencies": {

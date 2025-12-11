@@ -1,5 +1,6 @@
 import React from "react";
 import "./assets/main.css";
+import { ThemeProvider } from "./context/ThemeContext";
 import { Route, Switch, Router } from "wouter";
 
 import { Sidebar } from "./components/Sidebar";
@@ -18,41 +19,43 @@ import { NewsPanel } from "./components/NewsPanel";
 
 export const App: React.FC = () => {
     return (
-        <Router>
-            <div className="app-container">
-                <Sidebar />
-                <main className="main-content">
-                    <Switch>
-                        <Route path="/" component={DashboardPage} />
-                        <Route path="/dashboard" component={DashboardPage} />
-                        <Route path="/analytics" component={AnalyticsPage} />
-                        <Route path="/advanced" component={AdvancedAnalysisPage} />
-                        <Route path="/rules" component={RulesPage} />
-                        <Route path="/achievements" component={AchievementsPage} />
-                        {/* Date specific morning analysis */}
-                        <Route path="/morning/:date" component={MorningAnalysisPage} />
-                        <Route path="/morning" component={MorningAnalysisPage} />
-                        {/* If we want date param support in future: <Route path="/morning/:date" ... /> */}
+        <ThemeProvider>
+            <Router>
+                <div className="app-container">
+                    <Sidebar />
+                    <main className="main-content">
+                        <Switch>
+                            <Route path="/" component={DashboardPage} />
+                            <Route path="/dashboard" component={DashboardPage} />
+                            <Route path="/analytics" component={AnalyticsPage} />
+                            <Route path="/advanced" component={AdvancedAnalysisPage} />
+                            <Route path="/rules" component={RulesPage} />
+                            <Route path="/achievements" component={AchievementsPage} />
+                            {/* Date specific morning analysis */}
+                            <Route path="/morning/:date" component={MorningAnalysisPage} />
+                            <Route path="/morning" component={MorningAnalysisPage} />
+                            {/* If we want date param support in future: <Route path="/morning/:date" ... /> */}
 
-                        <Route path="/today" component={TodayPage} />
-                        <Route path="/calendar" component={CalendarPage} />
-                        <Route path="/calendar" component={CalendarPage} />
-                        <Route path="/eod/:date" component={EODReviewPage} />
-                        <Route path="/settings" component={SettingsPage} />
-                        <Route path="/news">
-                            <div style={{ padding: 24 }}>
-                                <NewsPanel />
-                            </div>
-                        </Route>
+                            <Route path="/today" component={TodayPage} />
+                            <Route path="/calendar" component={CalendarPage} />
+                            <Route path="/calendar" component={CalendarPage} />
+                            <Route path="/eod/:date" component={EODReviewPage} />
+                            <Route path="/settings" component={SettingsPage} />
+                            <Route path="/news">
+                                <div style={{ padding: 24 }}>
+                                    <NewsPanel />
+                                </div>
+                            </Route>
 
-                        {/* Fallback */}
-                        <Route>
-                            {(_params) => <DashboardPage />}
-                        </Route>
-                    </Switch>
-                </main>
-            </div>
-        </Router>
+                            {/* Fallback */}
+                            <Route>
+                                {(_params) => <DashboardPage />}
+                            </Route>
+                        </Switch>
+                    </main>
+                </div>
+            </Router>
+        </ThemeProvider>
     );
 };
 

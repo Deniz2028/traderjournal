@@ -106,7 +106,7 @@ export const CalendarPage: React.FC = () => {
             thisDate.setHours(0, 0, 0, 0); // Zero out time for comparison
             const isFuture = thisDate > realNow;
             const isToday = thisDate.getTime() === realNow.getTime();
-            const isPast = thisDate < realNow && !isToday;
+            // const isPast = thisDate < realNow && !isToday;
 
             els.push(
                 <div
@@ -240,7 +240,7 @@ const styles: Record<string, React.CSSProperties> = {
         color: "var(--text-primary)",
     },
     todayBtn: {
-        background: "#F3F4F6",
+        background: "var(--bg-element)",
         border: "none",
         borderRadius: 6,
         padding: "4px 12px",
@@ -257,7 +257,7 @@ const styles: Record<string, React.CSSProperties> = {
         borderBottom: "1px solid var(--border-subtle)",
     },
     headerCell: {
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "var(--bg-secondary)",
         padding: "8px",
         textAlign: "center",
         fontSize: 12,
@@ -274,17 +274,17 @@ const styles: Record<string, React.CSSProperties> = {
         overflowY: "auto",
     },
     dayCell: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "var(--bg-card)",
         padding: 8,
         display: "flex",
         flexDirection: "column",
         minHeight: 120,
     },
     dayCellToday: {
-        backgroundColor: "#F0F9FF",
+        backgroundColor: "var(--bg-today)",
     },
     dayCellEmpty: {
-        backgroundColor: "#F9FAFB",
+        backgroundColor: "var(--bg-secondary)",
     },
     dayNumRow: {
         display: "flex",
@@ -293,12 +293,13 @@ const styles: Record<string, React.CSSProperties> = {
     },
     tradePill: {
         fontSize: 10,
-        backgroundColor: "#F3F4F6",
+        backgroundColor: "var(--bg-element)",
         padding: "2px 4px",
         borderRadius: 4,
         display: "flex",
         justifyContent: "space-between",
         gap: 4,
+        color: "var(--text-primary)"
     },
     linkPillBlue: {
         marginTop: 2,
@@ -306,8 +307,8 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: 4,
         border: "none",
         fontSize: 10,
-        backgroundColor: "#EFF6FF",
-        color: "#2563EB",
+        backgroundColor: "var(--pill-blue-bg)",
+        color: "var(--pill-blue-text)",
         cursor: "pointer",
         fontWeight: 500,
         width: "100%",
@@ -321,8 +322,8 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: 4,
         border: "none",
         fontSize: 10,
-        backgroundColor: "#F0FDFA", // tealish
-        color: "#0F766E",
+        backgroundColor: "var(--pill-teal-bg)",
+        color: "var(--pill-teal-text)",
         cursor: "pointer",
         fontWeight: 500,
         width: "100%",
@@ -336,7 +337,7 @@ const styles: Record<string, React.CSSProperties> = {
         borderRadius: 4,
         border: "1px solid var(--border-subtle)",
         fontSize: 10,
-        backgroundColor: "#FFFFFF",
+        backgroundColor: "var(--bg-card)",
         color: "var(--text-secondary)",
         cursor: "pointer",
         fontWeight: 500,
@@ -349,9 +350,9 @@ const styles: Record<string, React.CSSProperties> = {
         marginTop: 2,
         padding: "2px 8px",
         borderRadius: 4,
-        border: "1px dashed #D1D5DB",
+        border: "1px dashed var(--border-subtle)",
         fontSize: 10,
-        color: "#9CA3AF",
+        color: "var(--text-secondary)",
         cursor: "pointer",
         fontWeight: 500,
         width: "100%",

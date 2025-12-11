@@ -3,7 +3,7 @@ import type { MorningMtfDaySnapshot } from "../../../shared/morningMtfTypes";
 import type { MorningMtfApi } from "../preload-api";
 
 function getApi(): MorningMtfApi {
-    // @ts-expect-error - global injected by preload
+    // global injected by preload
     return window.api.morningMtf;
 }
 
