@@ -116,6 +116,11 @@ function buildDashboardSummary(): DashboardSummaryPayload {
     const morning = loadRawMorning();
     const eods = loadRawEod();
 
+    // DUMMY DATA FALLBACK (If no data exists, show demo data)
+    if (trades.length === 0 && morning.length === 0 && eods.length === 0) {
+        return generateDummyDashboard();
+    }
+
     const { start, end } = getWeekRangeToday();
 
     // --- Günlük özet (haftalık) ---
@@ -271,4 +276,42 @@ export function registerDashboardIpc() {
     ipcMain.handle("dashboard:getSummary", async () => {
         return buildDashboardSummary();
     });
+}
+
+function generateDummyDashboard(): DashboardSummaryPayload {
+    return {
+        days: [
+            { date: "2025-12-08", label: "Mon", totalR: 2.5, tradeCount: 3 },
+            { date: "2025-12-09", label: "Tue", totalR: -1.0, tradeCount: 2 },
+            { date: "2025-12-10", label: "Wed", totalR: 4.2, tradeCount: 4 },
+            { date: "2025-12-11", label: "Thu", totalR: 1.5, tradeCount: 2 },
+            { date: "2025-12-12", label: "Fri", totalR: 0, tradeCount: 0 },
+            { date: "2025-12-13", label: "Sat", totalR: 0, tradeCount: 0 },
+            { date: "2025-12-14", label: "Sun", totalR: 0, tradeCount: 0 },
+        ],
+        totalR: 7.2,
+        totalTrades: 11,
+        winrate: 63.6,
+        avgRPerTrade: 0.65,
+        biasAccuracy: 80.0,
+        biasHistory: [
+            { date: "2025-12-01", status: "hit", morningBias: "Long", dayDirection: "UP" },
+            { date: "2025-12-02", status: "miss", morningBias: "Short", dayDirection: "UP" },
+            { date: "2025-12-03", status: "hit", morningBias: "Long", dayDirection: "UP" },
+            { date: "2025-12-04", status: "hit", morningBias: "Neutral", dayDirection: "CHOP" },
+            { date: "2025-12-05", status: "neutral", morningBias: "Neutral", dayDirection: "CHOP" },
+            { date: "2025-12-06", status: "hit", morningBias: "Short", dayDirection: "DOWN" },
+            { date: "2025-12-07", status: "no-data", morningBias: undefined, dayDirection: undefined },
+            { date: "2025-12-08", status: "hit", morningBias: "Long", dayDirection: "UP" },
+            { date: "2025-12-09", status: "miss", morningBias: "Long", dayDirection: "DOWN" },
+            { date: "2025-12-10", status: "hit", morningBias: "Short", dayDirection: "DOWN" },
+        ],
+        recentTrades: [
+            { id: "d1", date: "2025-12-11", symbol: "XAUUSD", resultR: 1.5 },
+            { id: "d2", date: "2025-12-10", symbol: "EURUSD", resultR: 2.2 },
+            { id: "d3", date: "2025-12-10", symbol: "GBPUSD", resultR: 2.0 },
+            { id: "d4", date: "2025-12-09", symbol: "XAUUSD", resultR: -1.0 },
+            { id: "d5", date: "2025-12-08", symbol: "NQ1!", resultR: 3.5 },
+        ]
+    };
 }
