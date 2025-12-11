@@ -10,6 +10,7 @@ import { TodayPage } from "./pages/TodayPage";
 import CalendarPage from "./pages/CalendarPage"; // Note: CalendarPage is default export now
 import { UtilsPage } from "./pages/UtilsPage"; // Removed if unused
 import { AchievementsPage } from "./pages/AchievementsPage";
+import { RulesPage } from "./pages/RulesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import EODReviewPage from "./pages/EODReviewPage";
 import { NewsPanel } from "./components/NewsPanel";
@@ -24,6 +25,7 @@ export const App: React.FC = () => {
                         <Route path="/" component={DashboardPage} />
                         <Route path="/dashboard" component={DashboardPage} />
                         <Route path="/analytics" component={AnalyticsPage} />
+                        <Route path="/rules" component={RulesPage} />
                         <Route path="/achievements" component={AchievementsPage} />
                         {/* Date specific morning analysis */}
                         <Route path="/morning/:date" component={MorningAnalysisPage} />

@@ -75,6 +75,13 @@ export const Sidebar: React.FC = () => {
             {/* Spacer pushes Settings to the very bottom */}
             <div style={{ flexGrow: 1 }} />
 
+            {/* Rules */}
+            <div style={{ padding: "0 12px 4px 12px" }}>
+                <Link href="/rules" style={{ ...styles.navItem, ...(isActive("/rules") ? styles.navItemActive : {}) }}>
+                    Rules
+                </Link>
+            </div>
+
             {/* Achievements above Settings */}
             <div style={{ padding: "0 12px 12px 12px" }}>
                 <Link href="/achievements" style={{ ...styles.navItem, ...(isActive("/achievements") ? styles.navItemActive : {}) }}>
