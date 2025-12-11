@@ -32,14 +32,24 @@ export const AdvancedAnalysisPage: React.FC = () => {
     }, []);
 
     const handleFetch = async () => {
-        if (!window.mt5Api) {
-            setError("mt5Api is not available from preload.");
+        // Debug logging
+        console.log("Checking mt5Api availability...");
+        console.log("window.mt5Api:", window.mt5Api);
+        console.log("window.api:", window.api);
+        
+        // Defensive check: prefer direct exposure, fallback to nested if exists
+        const mt5Api = window.mt5Api || (window.api && (window.api as any).mt5Api);
+
+        if (!mt5Api) {
+            console.error("mt5Api missing from window object");
+            setError("mt5Api is not available from preload (check console for details).");
             return;
         }
+
         setLoading(true);
         setError(null);
         try {
-            const resp = (await window.mt5Api.getSummary({
+            const resp = (await mt5Api.getSummary({
                 dateFrom,
                 dateTo,
             })) as Mt5SummaryResponse;
