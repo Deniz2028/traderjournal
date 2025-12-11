@@ -135,7 +135,6 @@ const styles: Record<string, React.CSSProperties> = {
         color: "var(--text-secondary)",
         fontSize: 14,
         fontWeight: 500,
-        fontWeight: 500,
         transition: "all 0.2s ease",
         display: "block",
     },
