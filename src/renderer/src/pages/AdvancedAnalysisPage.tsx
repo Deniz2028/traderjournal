@@ -10,6 +10,8 @@ import type {
     HourStat,
     WeekdayStat,
 } from "../types/advanced";
+import { getRules } from "../utils/rulesStorage";
+import { generateCoachingAdvice } from "../utils/coachingEngine";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
@@ -25,6 +27,7 @@ export const AdvancedAnalysisPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<Mt5SummaryResponse | null>(null);
+    const [coaching, setCoaching] = useState<ReturnType<typeof generateCoachingAdvice> | null>(null);
 
     useEffect(() => {
         handleFetch();
@@ -36,7 +39,7 @@ export const AdvancedAnalysisPage: React.FC = () => {
         console.log("Checking mt5Api availability...");
         console.log("window.mt5Api:", window.mt5Api);
         console.log("window.api:", window.api);
-        
+
         // Defensive check: prefer direct exposure, fallback to nested if exists
         const mt5Api = window.mt5Api || (window.api && (window.api as any).mt5Api);
 
@@ -54,6 +57,16 @@ export const AdvancedAnalysisPage: React.FC = () => {
                 dateTo,
             })) as Mt5SummaryResponse;
             setResult(resp);
+
+            // Generate coaching advice
+            const rules = getRules();
+            if (resp.ok && resp.summary) {
+                const advice = generateCoachingAdvice(resp.summary, rules);
+                setCoaching(advice);
+            } else {
+                setCoaching(null);
+            }
+
             if (!resp.ok && resp.error) {
                 setError(resp.error);
             }
@@ -234,8 +247,45 @@ export const AdvancedAnalysisPage: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
+                    {/* Coaching panel */}
+            <div className="card">
+                <h3 style={styles.sectionTitle}>Coach</h3>
+                {coaching ? (
+                    <div>
+                        <p
+                            style={{
+                                fontSize: 14,
+                                fontWeight: 600,
+                                marginBottom: 8,
+                            }}
+                        >
+                            {coaching.headline}
+                        </p>
+                        <ul
+                            style={{
+                                marginLeft: 18,
+                                fontSize: 13,
+                                color: "var(--text-secondary)",
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 4,
+                            }}
+                        >
+                            {coaching.bullets.map((b, idx) => (
+                                <li key={idx}>{b}</li>
+                            ))}
+                        </ul>
+                    </div>
+                ) : (
+                    <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                        Tavsiye üretmek için önce "Fetch from MT5" ile veri çekmelisin.
+                    </p>
+                )}
+            </div>
         </div>
+    )
+}
+        </div >
     );
 };
 
