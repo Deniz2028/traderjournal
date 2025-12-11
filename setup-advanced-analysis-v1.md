@@ -824,7 +824,7 @@ Her şey doğruysa:
 Üstte metrik kartları
 
 Ortada equity curve
-
+hh
 Altta symbol bazlı tablo
 
 görünecektir.

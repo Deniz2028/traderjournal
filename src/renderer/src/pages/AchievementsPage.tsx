@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import type { Achievement, CurrencyCode } from "../types/achievements";
+import type { Achievement, CurrencyCode, AchievementType, AccountStatus } from "../types/achievements";
 import {
     loadAchievements,
     addAchievement,
@@ -8,455 +7,436 @@ import {
     getTotals,
 } from "../utils/achievementsStorage";
 
-const currencyOptions: { value: CurrencyCode; label: string }[] = [
-    { value: "USD", label: "USD" },
-    { value: "EUR", label: "EUR" },
-    { value: "GBP", label: "GBP" },
-    { value: "Other", label: "Other" },
-];
+const currencyOptions: CurrencyCode[] = ["USD", "EUR", "GBP", "Other"];
+const statusOptions: AccountStatus[] = ["Phase 1", "Phase 2", "Funded", "Lost"];
 
 export const AchievementsPage: React.FC = () => {
     const [items, setItems] = useState<Achievement[]>([]);
+    const [isAddOpen, setIsAddOpen] = useState(false);
+
+    // Form Type
+    const [addType, setAddType] = useState<AchievementType>("account");
+
+    // Form Fields
     const [firm, setFirm] = useState("");
     const [title, setTitle] = useState("");
-    const [accountSize, setAccountSize] = useState("");
-    const [payout, setPayout] = useState("");
+    const [amount, setAmount] = useState(""); // Shared for Size or Payout
     const [currency, setCurrency] = useState<CurrencyCode>("USD");
-    const [imageUrl, setImageUrl] = useState("");
+    const [status, setStatus] = useState<AccountStatus>("Phase 1"); // For Account
+    const [imageUrl, setImageUrl] = useState(""); // For Payout
     const [date, setDate] = useState("");
-    const [notes, setNotes] = useState("");
 
     useEffect(() => {
         setItems(loadAchievements());
     }, []);
 
+    const totals = getTotals(items);
+
     const handleAdd = () => {
-        if (!firm.trim() && !title.trim()) return;
+        if (!firm && !title) return;
 
         const now = new Date();
         const id = String(now.getTime());
+        const numAmount = Number(amount) || 0;
 
         const newItem: Achievement = {
             id,
-            firm: firm.trim() || "Unknown",
-            title: title.trim() || "Funded account",
-            accountSize: Number(accountSize) || 0,
-            payout: Number(payout) || 0,
+            type: addType,
+            firm: firm || "Unknown Firm",
+            title: title || (addType === "account" ? "New Account" : "Payout"),
             currency,
-            imageUrl: imageUrl.trim() || undefined,
-            date: date || undefined,
-            notes: notes.trim() || undefined,
+            date: date || now.toISOString().slice(0, 10),
+
+            // Type specific
+            accountSize: addType === "account" ? numAmount : 0,
+            status: addType === "account" ? status : "Funded", // Payouts don't use status, default safe
+
+            payoutAmount: addType === "payout" ? numAmount : 0,
+            imageUrl: addType === "payout" ? imageUrl : undefined,
         };
 
         const next = addAchievement(newItem);
         setItems(next);
-
-        // formu temizle
-        setFirm("");
-        setTitle("");
-        setAccountSize("");
-        setPayout("");
-        setImageUrl("");
-        setDate("");
-        setNotes("");
+        setIsAddOpen(false);
+        resetForm();
     };
 
     const handleRemove = (id: string) => {
-        const next = removeAchievement(id);
-        setItems(next);
+        if (confirm("Are you sure?")) {
+            const next = removeAchievement(id);
+            setItems(next);
+        }
     };
 
-    const totals = getTotals(items);
+    const resetForm = () => {
+        setFirm("");
+        setTitle("");
+        setAmount("");
+        setImageUrl("");
+        setDate("");
+        setStatus("Phase 1");
+    };
+
+    // Filter lists
+    const accounts = items.filter(i => !i.type || i.type === "account"); // Legacy fallback
+    const payouts = items.filter(i => i.type === "payout");
 
     return (
         <div className="page-container">
-            <div className="page-header">
-                <h1 className="page-title">Achievements</h1>
-                <p className="page-subtitle">Track your funded accounts & payouts</p>
+            {/* Header */}
+            <div className="page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "end" }}>
+                <div>
+                    <h1 className="page-title">Achievements</h1>
+                    <p className="page-subtitle">Track your funding journey & rewards</p>
+                </div>
+                <button
+                    className="btn-primary"
+                    style={{
+                        backgroundColor: "var(--accent-primary)",
+                        color: "white",
+                        padding: "8px 16px",
+                        borderRadius: 8,
+                        fontWeight: 500,
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: 14
+                    }}
+                    onClick={() => setIsAddOpen(true)}
+                >
+                    + Add New
+                </button>
             </div>
 
-            <div className="card" style={{ padding: "20px 24px" }}>
-                {/* Header totals */}
-                <div
-                    style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                        gap: 12,
-                        marginBottom: 20,
-                    }}
-                >
-                    <div
-                        style={{
-                            padding: "12px 14px",
-                            borderRadius: 8,
-                            background: "var(--bg-subtle)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: 11,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.4,
-                                color: "var(--text-secondary)",
-                                fontWeight: 600,
-                            }}
-                        >
-                            Total funded size
-                        </span>
-                        <span style={{ fontSize: 18, fontWeight: 700 }}>
-                            {totals.totalFunded.toLocaleString()}{" "}
-                            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                (sum of account sizes)
-                            </span>
-                        </span>
+            {/* Stats Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 32 }}>
+                <div className="card" style={{ padding: 20 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, marginBottom: 4 }}>
+                        Total Funded Capital
                     </div>
-
-                    <div
-                        style={{
-                            padding: "12px 14px",
-                            borderRadius: 8,
-                            background: "var(--bg-subtle)",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 4,
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: 11,
-                                textTransform: "uppercase",
-                                letterSpacing: 0.4,
-                                color: "var(--text-secondary)",
-                                fontWeight: 600,
-                            }}
-                        >
-                            Total payouts
-                        </span>
-                        <span style={{ fontSize: 18, fontWeight: 700 }}>
-                            {totals.totalPayout.toLocaleString()}{" "}
-                            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                (sum of payouts)
-                            </span>
-                        </span>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text-primary)" }}>
+                        ${totals.totalFunded.toLocaleString()}
                     </div>
                 </div>
+                <div className="card" style={{ padding: 20 }}>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 600, marginBottom: 4 }}>
+                        Total Payouts
+                    </div>
+                    <div style={{ fontSize: 24, fontWeight: 700, color: "var(--color-green)" }}>
+                        ${totals.totalPayout.toLocaleString()}
+                    </div>
+                </div>
+            </div>
 
-                {/* Add new achievement form */}
-                <div
-                    style={{
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: 10,
-                        padding: 16,
-                        marginBottom: 20,
-                        display: "grid",
-                        gridTemplateColumns: "3fr 2fr",
-                        gap: 12,
-                    }}
-                >
-                    {/* Left column */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <div style={{ flex: 1 }}>
-                                <label className="form-label">Prop firm / broker</label>
+            {/* Accounts Section */}
+            <div style={{ marginBottom: 40 }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Funded Accounts</h3>
+                {accounts.length === 0 ? (
+                    <div style={{ color: "var(--text-secondary)", fontSize: 14, fontStyle: "italic" }}>No accounts added yet.</div>
+                ) : (
+                    <div style={{ display: "grid", gap: 12 }}>
+                        {accounts.map(acc => (
+                            <div key={acc.id} className="card" style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                    <div style={{
+                                        width: 48, height: 48, borderRadius: 8,
+                                        backgroundColor: "var(--bg-subtle)",
+                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontWeight: 700, color: "var(--text-secondary)", fontSize: 18
+                                    }}>
+                                        {acc.firm.slice(0, 1).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: 15 }}>{acc.firm}</div>
+                                        <div style={{ color: "var(--text-secondary)", fontSize: 13 }}>{acc.title} • {acc.accountSize.toLocaleString()} {acc.currency}</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                                    <StatusBadge status={acc.status || "Phase 1"} />
+                                    <button
+                                        onClick={() => handleRemove(acc.id)}
+                                        style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", opacity: 0.5 }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Payouts Gallery */}
+            <div>
+                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Payout Gallery</h3>
+                {payouts.length === 0 ? (
+                    <div style={{ color: "var(--text-secondary)", fontSize: 14, fontStyle: "italic" }}>No payouts recorded yet. Keep pushing!</div>
+                ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: 16 }}>
+                        {payouts.map(pay => (
+                            <div key={pay.id} className="card" style={{ overflow: "hidden", padding: 0 }}>
+                                <div style={{ height: 160, backgroundColor: "#000", position: "relative" }}>
+                                    {pay.imageUrl ? (
+                                        <img src={pay.imageUrl} alt="Proof" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    ) : (
+                                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#666" }}>
+                                            No Image
+                                        </div>
+                                    )}
+                                    <div style={{
+                                        position: "absolute", top: 10, right: 10,
+                                        backgroundColor: "rgba(0,0,0,0.7)", color: "white",
+                                        padding: "4px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600
+                                    }}>
+                                        {pay.date}
+                                    </div>
+                                </div>
+                                <div style={{ padding: 12 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                        <span style={{ fontWeight: 600, fontSize: 14 }}>{pay.firm}</span>
+                                        <span style={{ fontWeight: 700, fontSize: 15, color: "var(--color-green)" }}>
+                                            +{pay.payoutAmount?.toLocaleString()} {pay.currency}
+                                        </span>
+                                    </div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{pay.title}</span>
+                                        <button
+                                            onClick={() => handleRemove(pay.id)}
+                                            style={{ border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)", fontSize: 11 }}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Add Modal */}
+            {isAddOpen && (
+                <div style={{
+                    position: "fixed", inset: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(4px)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 999
+                }}>
+                    <div className="card" style={{
+                        width: 500, padding: 0, overflow: "hidden",
+                        boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+                        border: "1px solid var(--border-subtle)"
+                    }}>
+                        <div style={{ display: "flex", borderBottom: "1px solid var(--border-subtle)", backgroundColor: "#f9fafb" }}>
+                            <button
+                                style={{
+                                    flex: 1, padding: "16px 0",
+                                    background: addType === "account" ? "#fff" : "transparent",
+                                    border: "none",
+                                    borderBottom: addType === "account" ? "2px solid var(--accent-primary)" : "2px solid transparent",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    color: addType === "account" ? "var(--accent-primary)" : "var(--text-secondary)",
+                                    fontSize: 14,
+                                    transition: "all 0.2s"
+                                }}
+                                onClick={() => setAddType("account")}
+                            >
+                                Funded Account
+                            </button>
+                            <button
+                                style={{
+                                    flex: 1, padding: "16px 0",
+                                    background: addType === "payout" ? "#fff" : "transparent",
+                                    border: "none",
+                                    borderBottom: addType === "payout" ? "2px solid var(--color-green)" : "2px solid transparent",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    color: addType === "payout" ? "var(--color-green)" : "var(--text-secondary)",
+                                    fontSize: 14,
+                                    transition: "all 0.2s"
+                                }}
+                                onClick={() => setAddType("payout")}
+                            >
+                                Payout
+                            </button>
+                        </div>
+
+                        <div style={{ padding: 32, display: "flex", flexDirection: "column", gap: 20 }}>
+                            {/* Firm */}
+                            <div>
+                                <label className="form-label" style={{ marginBottom: 6, display: "block" }}>Prop Firm</label>
                                 <input
                                     className="input"
+                                    placeholder="e.g. FTMO, MyForexFunds"
+                                    style={{ width: "100%", padding: "10px 12px" }}
                                     value={firm}
-                                    onChange={(e) => setFirm(e.target.value)}
-                                    placeholder="FTMO, MyForexFunds..."
+                                    onChange={e => setFirm(e.target.value)}
                                 />
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <label className="form-label">Title</label>
+
+                            {/* Title */}
+                            <div>
+                                <label className="form-label" style={{ marginBottom: 6, display: "block" }}>
+                                    {addType === "account" ? "Challenge Title" : "Payout Title"}
+                                </label>
                                 <input
                                     className="input"
+                                    placeholder={addType === "account" ? "200k Swing Challenge" : "First Withdrawal"}
+                                    style={{ width: "100%", padding: "10px 12px" }}
                                     value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="200k Challenge Passed"
+                                    onChange={e => setTitle(e.target.value)}
                                 />
                             </div>
-                        </div>
 
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <div style={{ flex: 1 }}>
-                                <label className="form-label">Account size</label>
-                                <input
-                                    className="input"
-                                    type="number"
-                                    value={accountSize}
-                                    onChange={(e) => setAccountSize(e.target.value)}
-                                    placeholder="200000"
-                                />
+                            {/* Amount Row */}
+                            <div style={{ display: "flex", gap: 16 }}>
+                                <div style={{ flex: 2 }}>
+                                    <label className="form-label" style={{ marginBottom: 6, display: "block" }}>
+                                        {addType === "account" ? "Account Size" : "Payout Amount"}
+                                    </label>
+                                    <div style={{ position: "relative" }}>
+                                        <span style={{ position: "absolute", left: 12, top: 10, color: "var(--text-secondary)" }}>$</span>
+                                        <input
+                                            className="input"
+                                            type="number"
+                                            placeholder="0.00"
+                                            style={{ width: "100%", padding: "10px 12px 10px 24px" }}
+                                            value={amount}
+                                            onChange={e => setAmount(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <label className="form-label" style={{ marginBottom: 6, display: "block" }}>Currency</label>
+                                    <select
+                                        className="input"
+                                        style={{ width: "100%", padding: "10px 12px" }}
+                                        value={currency}
+                                        onChange={e => setCurrency(e.target.value as CurrencyCode)}
+                                    >
+                                        {currencyOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
                             </div>
-                            <div style={{ flex: 1 }}>
-                                <label className="form-label">Payout</label>
-                                <input
-                                    className="input"
-                                    type="number"
-                                    value={payout}
-                                    onChange={(e) => setPayout(e.target.value)}
-                                    placeholder="3500"
-                                />
-                            </div>
-                            <div style={{ width: 110 }}>
-                                <label className="form-label">Currency</label>
-                                <select
-                                    className="input"
-                                    value={currency}
-                                    onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-                                >
-                                    {currencyOptions.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
 
-                        <div style={{ display: "flex", gap: 8 }}>
-                            <div style={{ flex: 1 }}>
-                                <label className="form-label">Image URL (PNG/JPG)</label>
-                                <input
-                                    className="input"
-                                    value={imageUrl}
-                                    onChange={(e) => setImageUrl(e.target.value)}
-                                    placeholder="https://..."
-                                />
-                            </div>
-                            <div style={{ width: 140 }}>
-                                <label className="form-label">Date</label>
+                            {/* Type Specific */}
+                            {addType === "account" ? (
+                                <div>
+                                    <label className="form-label" style={{ marginBottom: 6, display: "block" }}>Current Status</label>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                        {statusOptions.map(s => (
+                                            <button
+                                                key={s}
+                                                onClick={() => setStatus(s as AccountStatus)}
+                                                style={{
+                                                    padding: "6px 12px",
+                                                    borderRadius: 6,
+                                                    border: status === s ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                                                    background: status === s ? "var(--bg-active)" : "white",
+                                                    color: status === s ? "var(--accent-primary)" : "var(--text-secondary)",
+                                                    cursor: "pointer",
+                                                    fontSize: 13,
+                                                    fontWeight: 500
+                                                }}
+                                            >
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="form-label" style={{ marginBottom: 6, display: "block" }}>Proof Image URL</label>
+                                    <input
+                                        className="input"
+                                        placeholder="https://i.imgur.com/..."
+                                        style={{ width: "100%", padding: "10px 12px" }}
+                                        value={imageUrl}
+                                        onChange={e => setImageUrl(e.target.value)}
+                                    />
+                                    <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 6 }}>
+                                        Paste a direct link to your Certificate or Payout screenshot (PNG/JPG).
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Date */}
+                            <div>
+                                <label className="form-label" style={{ marginBottom: 6, display: "block" }}>Date</label>
                                 <input
                                     className="input"
                                     type="date"
+                                    style={{ width: "100%", padding: "10px 12px" }}
                                     value={date}
-                                    onChange={(e) => setDate(e.target.value)}
+                                    onChange={e => setDate(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        <div>
-                            <label className="form-label">Notes (optional)</label>
-                            <textarea
-                                className="input"
-                                rows={2}
-                                value={notes}
-                                onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Short note about this payout / account..."
-                            />
-                        </div>
-
-                        <div style={{ marginTop: 8 }}>
+                        <div style={{ padding: "20px 32px", background: "#f9fafb", borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end", gap: 12 }}>
                             <button
-                                className="btn btn-primary"
-                                type="button"
-                                onClick={handleAdd}
+                                className="btn-ghost"
+                                onClick={() => setIsAddOpen(false)}
+                                style={{ padding: "8px 16px" }}
                             >
-                                + Add achievement
+                                Cancel
+                            </button>
+                            <button
+                                className="btn-primary"
+                                onClick={handleAdd}
+                                style={{
+                                    backgroundColor: addType === "account" ? "var(--accent-primary)" : "var(--color-green)",
+                                    color: "white",
+                                    padding: "8px 20px",
+                                    borderRadius: 6,
+                                    border: "none",
+                                    fontWeight: 600,
+                                    fontSize: 14,
+                                    cursor: "pointer",
+                                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                                }}
+                            >
+                                Save {addType === "account" ? "Account" : "Payout"}
                             </button>
                         </div>
                     </div>
-
-                    {/* Right column – small preview */}
-                    <div
-                        style={{
-                            borderLeft: "1px dashed var(--border-subtle)",
-                            paddingLeft: 12,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 8,
-                        }}
-                    >
-                        <span
-                            style={{
-                                fontSize: 12,
-                                color: "var(--text-secondary)",
-                                marginBottom: 4,
-                            }}
-                        >
-                            Preview
-                        </span>
-                        {imageUrl ? (
-                            <div
-                                style={{
-                                    borderRadius: 10,
-                                    overflow: "hidden",
-                                    border: "1px solid var(--border-subtle)",
-                                    maxHeight: 200,
-                                }}
-                            >
-                                <img
-                                    src={imageUrl}
-                                    alt="Achievement preview"
-                                    style={{ width: "100%", display: "block", objectFit: "cover" }}
-                                />
-                            </div>
-                        ) : (
-                            <div
-                                style={{
-                                    borderRadius: 10,
-                                    border: "1px dashed var(--border-subtle)",
-                                    padding: 12,
-                                    fontSize: 12,
-                                    color: "var(--text-secondary)",
-                                }}
-                            >
-                                Paste a PNG/JPG URL to preview it here. (Local file upload can be
-                                added in a future version.)
-                            </div>
-                        )}
-                    </div>
                 </div>
-
-                {/* Existing achievements list */}
-                {items.length > 0 && (
-                    <>
-                        <h3
-                            style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                marginBottom: 8,
-                            }}
-                        >
-                            Saved achievements
-                        </h3>
-                        <table
-                            style={{
-                                width: "100%",
-                                borderCollapse: "collapse",
-                                fontSize: 13,
-                                marginBottom: 16,
-                            }}
-                        >
-                            <thead>
-                                <tr>
-                                    <th style={thStyle}>Firm</th>
-                                    <th style={thStyle}>Title</th>
-                                    <th style={thStyle}>Account</th>
-                                    <th style={thStyle}>Payout</th>
-                                    <th style={thStyle}>Date</th>
-                                    <th style={thStyle}></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {items.map((a) => (
-                                    <tr key={a.id}>
-                                        <td style={tdStyle}>{a.firm}</td>
-                                        <td style={tdStyle}>{a.title}</td>
-                                        <td style={tdStyle}>
-                                            {a.accountSize.toLocaleString()} {a.currency}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            {a.payout.toLocaleString()} {a.currency}
-                                        </td>
-                                        <td style={tdStyle}>{a.date || "—"}</td>
-                                        <td style={{ ...tdStyle, textAlign: "right" }}>
-                                            <button
-                                                type="button"
-                                                className="btn btn-ghost"
-                                                onClick={() => handleRemove(a.id)}
-                                            >
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-
-                        {/* Image gallery */}
-                        <h3
-                            style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                marginBottom: 8,
-                            }}
-                        >
-                            Achievement gallery
-                        </h3>
-                        <div
-                            style={{
-                                display: "grid",
-                                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                                gap: 12,
-                            }}
-                        >
-                            {items
-                                .filter((a) => a.imageUrl)
-                                .map((a) => (
-                                    <div
-                                        key={a.id}
-                                        style={{
-                                            borderRadius: 10,
-                                            border: "1px solid var(--border-subtle)",
-                                            overflow: "hidden",
-                                            background: "var(--bg-subtle)",
-                                        }}
-                                    >
-                                        <div style={{ maxHeight: 140, overflow: "hidden" }}>
-                                            <img
-                                                src={a.imageUrl}
-                                                alt={a.title}
-                                                style={{
-                                                    width: "100%",
-                                                    display: "block",
-                                                    objectFit: "cover",
-                                                }}
-                                            />
-                                        </div>
-                                        <div style={{ padding: 8 }}>
-                                            <div
-                                                style={{
-                                                    fontSize: 12,
-                                                    fontWeight: 600,
-                                                    marginBottom: 2,
-                                                }}
-                                            >
-                                                {a.title}
-                                            </div>
-                                            <div
-                                                style={{
-                                                    fontSize: 11,
-                                                    color: "var(--text-secondary)",
-                                                }}
-                                            >
-                                                {a.firm} – {a.payout.toLocaleString()} {a.currency}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                        </div>
-                    </>
-                )}
-
-                {items.length === 0 && (
-                    <p
-                        style={{
-                            fontSize: 12,
-                            color: "var(--text-secondary)",
-                            marginTop: 4,
-                        }}
-                    >
-                        No achievements saved yet. Add your first funded account or payout
-                        above.
-                    </p>
-                )}
-            </div>
+            )}
         </div>
     );
 };
 
-const thStyle: React.CSSProperties = {
-    textAlign: "left",
-    padding: "8px 10px",
-    borderBottom: "1px solid var(--border-subtle)",
-    color: "var(--text-secondary)",
-    fontWeight: 600,
-};
+const StatusBadge: React.FC<{ status: AccountStatus }> = ({ status }) => {
+    let color = "#6B7280";
+    let bg = "rgba(107, 114, 128, 0.1)";
 
-const tdStyle: React.CSSProperties = {
-    padding: "6px 10px",
-    borderBottom: "1px solid var(--border-subtle)",
+    switch (status) {
+        case "Funded":
+            color = "#10B981";
+            bg = "rgba(16, 185, 129, 0.15)";
+            break;
+        case "Phase 2":
+            color = "#F59E0B";
+            bg = "rgba(245, 158, 11, 0.15)";
+            break;
+        case "Phase 1":
+            color = "#3B82F6";
+            bg = "rgba(59, 130, 246, 0.15)";
+            break;
+        case "Lost":
+            color = "#EF4444";
+            bg = "rgba(239, 68, 68, 0.15)";
+            break;
+    }
+
+    return (
+        <span style={{
+            color, backgroundColor: bg,
+            padding: "4px 8px", borderRadius: 4,
+            fontSize: 12, fontWeight: 600
+        }}>
+            {status}
+        </span>
+    );
 };

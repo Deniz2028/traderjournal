@@ -8,12 +8,12 @@ import { DashboardPage } from "./pages/DashboardPage";
 import MorningAnalysisPage from "./pages/MorningAnalysisPage";
 import { TodayPage } from "./pages/TodayPage";
 import CalendarPage from "./pages/CalendarPage"; // Note: CalendarPage is default export now
-import { UtilsPage } from "./pages/UtilsPage"; // Removed if unused
+
 import { AchievementsPage } from "./pages/AchievementsPage";
 import { RulesPage } from "./pages/RulesPage";
 import { AdvancedAnalysisPage } from "./pages/AdvancedAnalysisPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import EODReviewPage from "./pages/EODReviewPage";
+import { EodReviewPage as EODReviewPage } from "./pages/EODReviewPage";
 import { NewsPanel } from "./components/NewsPanel";
 
 export const App: React.FC = () => {

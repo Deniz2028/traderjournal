@@ -11,7 +11,7 @@
         "jsx": "react-jsx",
         "esModuleInterop": true,
         "types": [
-            "electron-vite/client"
+            "vite/client"
         ]
     }
 }

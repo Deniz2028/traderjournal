@@ -176,7 +176,7 @@ export const CalendarPage: React.FC = () => {
                                 EOD Review
                             </Link>
                         ) : (
-                            isToday && new Date().getHours() >= 12 && (
+                            isToday && (
                                 <Link href={`/eod/${dateStr}`} style={styles.linkPillDashed}>
                                     + EOD
                                 </Link>

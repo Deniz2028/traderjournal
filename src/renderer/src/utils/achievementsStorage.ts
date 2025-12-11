@@ -50,8 +50,25 @@ export function getTotals(list: Achievement[]): {
     let totalPayout = 0;
 
     for (const a of list) {
-        if (a.accountSize) totalFunded += a.accountSize;
-        if (a.payout) totalPayout += a.payout;
+        // Legacy support: if no type, assume account
+        const isPayout = a.type === "payout";
+
+        if (isPayout) {
+            if (a.payoutAmount) totalPayout += a.payoutAmount;
+            // Legacy field fallback
+            else if ((a as any).payout) totalPayout += (a as any).payout;
+        } else {
+            // Account
+            // Only count if ACTIVE (Funded)
+            // If status is undefined (legacy), assume it counts? 
+            // Or maybe we treat legacy items as just "achievements" and count them?
+            // Let's count "Funded" and legacy items with valid sizes.
+
+            // If new status field exists, only count "Funded".
+            if (a.status && a.status !== "Funded") continue;
+
+            if (a.accountSize) totalFunded += a.accountSize;
+        }
     }
 
     return { totalFunded, totalPayout };

@@ -1,15 +1,25 @@
-// src/renderer/src/types/achievements.ts
-
 export type CurrencyCode = "USD" | "EUR" | "GBP" | "Other";
 
+export type AchievementType = "account" | "payout";
+
+export type AccountStatus = "Phase 1" | "Phase 2" | "Funded" | "Lost";
+
 export interface Achievement {
-    id: string;          // örn. timestamp veya uuid string
-    firm: string;        // Prop firm / broker adı (örn. "FTMO")
-    title: string;       // Kısa başlık (örn. "200k Challenge Passed")
-    accountSize: number; // Funded account büyüklüğü (ör: 200000)
-    payout: number;      // Payout miktarı (ör: 3500)
+    id: string;
+    type: AchievementType;
+
+    // Common
+    firm: string;
+    date?: string;
     currency: CurrencyCode;
-    date?: string;       // opsiyonel "2025-12-11"
-    imageUrl?: string;   // Payout / sertifika PNG ya da JPG URL
-    notes?: string;      // kısa not (opsiyonel)
+    notes?: string;
+
+    // For Account
+    title: string; // e.g. "200k Challenge"
+    accountSize: number;
+    status: AccountStatus;
+
+    // For Payout
+    payoutAmount?: number;
+    imageUrl?: string;
 }

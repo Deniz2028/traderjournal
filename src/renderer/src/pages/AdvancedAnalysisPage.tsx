@@ -246,47 +246,44 @@ export const AdvancedAnalysisPage: React.FC = () => {
                             <WeekdayTable weekdays={summary.weekdays} />
                         </div>
                     </div>
-                </div>
-
-                {/* Coaching panel */}
-            <div className="card">
-                <h3 style={styles.sectionTitle}>Coach</h3>
-                {coaching ? (
-                    <div>
-                        <p
-                            style={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                marginBottom: 8,
-                            }}
-                        >
-                            {coaching.headline}
-                        </p>
-                        <ul
-                            style={{
-                                marginLeft: 18,
-                                fontSize: 13,
-                                color: "var(--text-secondary)",
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: 4,
-                            }}
-                        >
-                            {coaching.bullets.map((b, idx) => (
-                                <li key={idx}>{b}</li>
-                            ))}
-                        </ul>
+                    {/* Coaching panel */}
+                    <div className="card">
+                        <h3 style={styles.sectionTitle}>Coach</h3>
+                        {coaching ? (
+                            <div>
+                                <p
+                                    style={{
+                                        fontSize: 14,
+                                        fontWeight: 600,
+                                        marginBottom: 8,
+                                    }}
+                                >
+                                    {coaching.headline}
+                                </p>
+                                <ul
+                                    style={{
+                                        marginLeft: 18,
+                                        fontSize: 13,
+                                        color: "var(--text-secondary)",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: 4,
+                                    }}
+                                >
+                                    {coaching.bullets.map((b, idx) => (
+                                        <li key={idx}>{b}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                                Tavsiye üretmek için önce "Fetch from MT5" ile veri çekmelisin.
+                            </p>
+                        )}
                     </div>
-                ) : (
-                    <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                        Tavsiye üretmek için önce "Fetch from MT5" ile veri çekmelisin.
-                    </p>
-                )}
-            </div>
+                </div>
+            )}
         </div>
-    )
-}
-        </div >
     );
 };
 
