@@ -17,7 +17,6 @@ import {
 import type { Achievement, CurrencyCode } from "../types/achievements";
 import {
   loadAchievements,
-  saveAchievements,
   addAchievement,
   removeAchievement,
   getTotals,
@@ -166,43 +165,6 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Achievements */}
-        <div className="card" style={{ marginTop: 24, padding: "20px 24px" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-            Achievements
-          </h2>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              marginBottom: 16,
-            }}
-          >
-            Track your funded accounts, payouts and important milestones. Data is stored
-            locally on this device.
-          </p>
-
-          <AchievementsSection />
-        </div>
-
-        {/* Achievements */}
-        <div className="card" style={{ marginTop: 24, padding: "20px 24px" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
-            Achievements
-          </h2>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--text-secondary)",
-              marginBottom: 16,
-            }}
-          >
-            Track your funded accounts, payouts and important milestones. Data is stored
-            locally on this device.
-          </p>
-
-          <AchievementsSection />
-        </div>
 
         {/* MTF Configuration */}
 
@@ -286,6 +248,25 @@ export const SettingsPage: React.FC = () => {
           >
             Save Settings
           </button>
+        </div>
+
+        {/* Achievements */}
+        <div className="card" style={{ marginTop: 40, padding: "20px 24px" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>
+            Achievements
+          </h2>
+          <p
+            style={{
+              fontSize: 13,
+              color: "var(--text-secondary)",
+              marginBottom: 16,
+            }}
+          >
+            Track your funded accounts, payouts and important milestones. Data is stored
+            locally on this device.
+          </p>
+
+          <AchievementsSection />
         </div>
 
         <div style={{ marginTop: 40, borderTop: "1px solid var(--border-subtle)", paddingTop: 20 }}>
