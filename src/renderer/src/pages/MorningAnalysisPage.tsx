@@ -1,6 +1,12 @@
+
 // src/renderer/src/pages/MorningAnalysisPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useRoute } from "wouter";
+
+import {
+    fetchMorningForDate,
+    saveMorningForDate,
+} from "../utils/morningMtfClient";
 import type {
     MorningMtfBias,
     MorningMtfDaySnapshot,
@@ -8,14 +14,6 @@ import type {
     MorningMtfTimeframeId,
     MorningMtfTimeframeSnapshot,
 } from "../../../shared/morningMtfTypes";
-import {
-    loadMorningMtfSettings,
-    getTimeframesForSymbol,
-} from "../utils/morningMtfSettings";
-import {
-    fetchMorningForDate,
-    saveMorningForDate,
-} from "../utils/morningMtfClient";
 
 type Bias = MorningMtfBias;
 type TF = MorningMtfTimeframeId;
@@ -82,9 +80,6 @@ const MorningAnalysisPage: React.FC = () => {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [lightboxImage]);
 
-    // Settings for instrument list and timeframes
-    const mtfSettings = useMemo(() => loadMorningMtfSettings(), []);
-
     useEffect(() => {
         fetchMorningForDate(dateISO).then((existing) => {
             if (existing) {
@@ -95,7 +90,7 @@ const MorningAnalysisPage: React.FC = () => {
             }
             setSettingsLoaded(true);
         });
-    }, [dateISO, mtfSettings]);
+    }, [dateISO]);
 
     // Set initial active tabs
     useEffect(() => {
@@ -157,8 +152,8 @@ const MorningAnalysisPage: React.FC = () => {
     return (
         <div>
             <style>{`
-                @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-            `}</style>
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+`}</style>
             <div className="page-header">
                 <h1 className="page-title">Morning Analysis</h1>
                 <p className="page-subtitle">

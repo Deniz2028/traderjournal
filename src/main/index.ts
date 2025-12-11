@@ -8,6 +8,7 @@ import {
     Trade as MainTrade,
 } from "./tradeRepo";
 import { registerMorningHandlers } from "./morningStore";
+import { registerDashboardIpc } from "./dashboardSummary";
 import {
     getMorningMtfForDate,
     saveMorningMtfForDate,
@@ -85,6 +86,7 @@ app.whenReady().then(() => {
     registerMorningHandlers();
 
     // MTF Morning Analysis Handlers
+    registerDashboardIpc();
     ipcMain.handle("morningMtf:getForDate", async (_event, date: string) => {
         return getMorningMtfForDate(date);
     });

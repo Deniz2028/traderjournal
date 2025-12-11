@@ -30,7 +30,7 @@ export const CalendarPage: React.FC = () => {
             setJournalMap(summary);
 
             // Morning
-            const snapshots = await fetchMorningForMonth(year, month);
+            const snapshots = await fetchMorningForMonth(year, month + 1);
             const dates = snapshots.map(s => s.date);
             setMorningDates(dates);
 

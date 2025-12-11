@@ -52,6 +52,9 @@ const api = {
     },
     news: {
         getThisWeek: () => ipcRenderer.invoke("news:getThisWeek")
+    },
+    dashboard: {
+        getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),
     }
 };
 

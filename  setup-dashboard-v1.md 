@@ -1,0 +1,816 @@
+# setup-dashboard-v1.md  
+(Real data–driven Dashboard + bias accuracy summary)
+
+Amaç:
+- Dashboard’daki sahte (“dummy”) verileri kaldırıp **gerçek backend verisi** ile beslemek.
+- Aşağıdaki verileri tek bir IPC üzerinden almak:
+  - Son 5 gün için günlük toplam R ve trade sayısı
+  - Genel istatistikler: total R, winrate, avg R / trade
+  - Morning main bias + EOD day direction’dan **bias accuracy**
+  - Bias history (son 10 gün için hit / miss)
+  - Recent trades listesi
+- Mevcut News / Morning / Today / Calendar fonksiyonlarına dokunmamak.
+
+> ÖNEMLİ  
+> - `package.json`, `tsconfig.*` veya Electron config dosyalarına dokunma.  
+> - Sadece burada adı geçen dosyaları oluştur / düzenle.  
+> - Aşağıdaki adımlar sırasıyla uygulanmalı.
+
+---
+
+## 1. Main side – dashboardSummary helper
+
+### File: `src/main/dashboardSummary.ts`
+
+Bu dosyayı **yeni oluştur** ve tamamını şu kodla doldur:
+
+```ts
+// src/main/dashboardSummary.ts
+import fs from "fs";
+import path from "path";
+import { app, ipcMain } from "electron";
+
+type Bias3 = "Long" | "Short" | "Neutral";
+type DayDirection = "UP" | "DOWN" | "CHOP";
+
+interface RawTrade {
+  id?: string;
+  date?: string; // "2025-12-11"
+  symbol?: string;
+  resultR?: number;
+  outcome?: string;
+}
+
+interface RawMorning {
+  date?: string;
+  mainBias?: Bias3;
+}
+
+interface RawEod {
+  date?: string;
+  dayDirection?: DayDirection;
+}
+
+export interface DashboardDaySummary {
+  date: string;    // ISO
+  label: string;   // "Mon"
+  totalR: number;
+  tradeCount: number;
+}
+
+export interface BiasHistoryItem {
+  date: string;
+  morningBias?: Bias3;
+  dayDirection?: DayDirection;
+  status: "hit" | "miss" | "neutral" | "no-data";
+}
+
+export interface DashboardRecentTrade {
+  id: string;
+  date: string;
+  symbol: string;
+  resultR: number;
+}
+
+export interface DashboardSummaryPayload {
+  days: DashboardDaySummary[];
+  totalR: number;
+  totalTrades: number;
+  winrate: number | null;       // 0–100, null = hesaplanamadı
+  avgRPerTrade: number | null;
+  biasAccuracy: number | null;  // 0–100, null = veri yok
+  biasHistory: BiasHistoryItem[];
+  recentTrades: DashboardRecentTrade[];
+}
+
+/**
+ * Küçük yardımcı – JSON dosyasını güvenli şekilde oku.
+ */
+function readJsonSafe<T>(filePath: string, fallback: T): T {
+  try {
+    if (!fs.existsSync(filePath)) return fallback;
+    const raw = fs.readFileSync(filePath, "utf-8");
+    if (!raw.trim()) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function getUserDataPath() {
+  return app.getPath("userData");
+}
+
+function loadRawTrades(): RawTrade[] {
+  const file = path.join(getUserDataPath(), "trades.json");
+  return readJsonSafe<RawTrade[]>(file, []);
+}
+
+function loadRawMorning(): RawMorning[] {
+  const file = path.join(getUserDataPath(), "morning_mtf.json");
+  return readJsonSafe<RawMorning[]>(file, []);
+}
+
+function loadRawEod(): RawEod[] {
+  const file = path.join(getUserDataPath(), "eod_reviews.json");
+  return readJsonSafe<RawEod[]>(file, []);
+}
+
+function getWeekRangeToday(): { start: Date; end: Date } {
+  const today = new Date();
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+  // Pazartesi = 1, Pazar = 0
+  const day = end.getDay();
+  const diff = day === 0 ? 6 : day - 1; // haftanın başı: Pazartesi
+  const start = new Date(end);
+  start.setDate(end.getDate() - diff);
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
+}
+
+function formatDayLabel(d: Date): string {
+  const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return labels[d.getDay()];
+}
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function buildDashboardSummary(): DashboardSummaryPayload {
+  const trades = loadRawTrades();
+  const morning = loadRawMorning();
+  const eods = loadRawEod();
+
+  const { start, end } = getWeekRangeToday();
+
+  // --- Günlük özet (haftalık) ---
+  const days: DashboardDaySummary[] = [];
+  const dayMap = new Map<string, { totalR: number; count: number }>();
+
+  for (
+    let cursor = new Date(start);
+    cursor <= end;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
+    const dayISO = isoDate(cursor);
+    dayMap.set(dayISO, { totalR: 0, count: 0 });
+    days.push({
+      date: dayISO,
+      label: formatDayLabel(cursor),
+      totalR: 0,
+      tradeCount: 0,
+    });
+  }
+
+  trades.forEach((t) => {
+    if (!t.date || typeof t.resultR !== "number") return;
+    const d = new Date(t.date);
+    if (d < start || d > end) return;
+    const key = t.date.slice(0, 10);
+    const bucket = dayMap.get(key);
+    if (!bucket) return;
+    bucket.totalR += t.resultR!;
+    bucket.count += 1;
+  });
+
+  let totalR = 0;
+  let totalTrades = 0;
+  let wins = 0;
+
+  const outcomeIsWin = (o?: string | null) =>
+    o === "TP" || o === "tp" || o === "WIN" || o === "win";
+
+  days.forEach((day) => {
+    const bucket = dayMap.get(day.date);
+    if (!bucket) return;
+    day.totalR = bucket.totalR;
+    day.tradeCount = bucket.count;
+    totalR += bucket.totalR;
+    totalTrades += bucket.count;
+  });
+
+  trades.forEach((t) => {
+    if (!t.date) return;
+    const d = new Date(t.date);
+    if (d < start || d > end) return;
+    if (outcomeIsWin(t.outcome)) wins += 1;
+  });
+
+  const winrate =
+    totalTrades > 0 ? Number(((wins / totalTrades) * 100).toFixed(1)) : null;
+  const avgRPerTrade =
+    totalTrades > 0 ? Number((totalR / totalTrades).toFixed(2)) : null;
+
+  // --- Bias accuracy (son 10 gün) ---
+  const biasHistory: BiasHistoryItem[] = [];
+  const historyDays = 10;
+
+  // index kolaylığı için mapler
+  const morningByDate = new Map<string, RawMorning>();
+  morning.forEach((m) => {
+    if (m.date) morningByDate.set(m.date.slice(0, 10), m);
+  });
+
+  const eodByDate = new Map<string, RawEod>();
+  eods.forEach((e) => {
+    if (e.date) eodByDate.set(e.date.slice(0, 10), e);
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let biasHitCount = 0;
+  let biasTotalCount = 0;
+
+  for (let i = historyDays - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = isoDate(d);
+
+    const m = morningByDate.get(key);
+    const e = eodByDate.get(key);
+
+    let status: BiasHistoryItem["status"] = "no-data";
+
+    if (!m && !e) {
+      status = "no-data";
+    } else if (!m || !e) {
+      status = "neutral";
+    } else if (!m.mainBias || m.mainBias === "Neutral" || !e.dayDirection) {
+      status = "neutral";
+    } else {
+      // Long + UP veya Short + DOWN başarı sayılır
+      const hit =
+        (m.mainBias === "Long" && e.dayDirection === "UP") ||
+        (m.mainBias === "Short" && e.dayDirection === "DOWN");
+      status = hit ? "hit" : "miss";
+      biasTotalCount += 1;
+      if (hit) biasHitCount += 1;
+    }
+
+    biasHistory.push({
+      date: key,
+      morningBias: m?.mainBias,
+      dayDirection: e?.dayDirection,
+      status,
+    });
+  }
+
+  const biasAccuracy =
+    biasTotalCount > 0
+      ? Number(((biasHitCount / biasTotalCount) * 100).toFixed(1))
+      : null;
+
+  // --- Recent trades (tüm zaman, son 10 kayıt) ---
+  const recentTrades: DashboardRecentTrade[] = [...trades]
+    .filter((t) => t.id && t.date && typeof t.resultR === "number")
+    .sort((a, b) => {
+      const da = new Date(a.date || 0).getTime();
+      const db = new Date(b.date || 0).getTime();
+      return db - da;
+    })
+    .slice(0, 10)
+    .map((t) => ({
+      id: String(t.id),
+      date: t.date!.slice(0, 10),
+      symbol: t.symbol || "?",
+      resultR: t.resultR ?? 0,
+    }));
+
+  return {
+    days,
+    totalR,
+    totalTrades,
+    winrate,
+    avgRPerTrade,
+    biasAccuracy,
+    biasHistory,
+    recentTrades,
+  };
+}
+
+/**
+ * Main process’te çağrılır; IPC route’u kaydeder.
+ */
+export function registerDashboardIpc() {
+  ipcMain.handle("dashboard:getSummary", async () => {
+    return buildDashboardSummary();
+  });
+}
+2. Main entry – IPC kaydı ekle
+File: src/main/index.ts
+Bu dosyayı tamamen değiştirme. Sadece aşağıdaki eklemeleri yap:
+
+Diğer import’ların yanına şu satırı ekle:
+
+ts
+Copy code
+import { registerDashboardIpc } from "./dashboardSummary";
+app.whenReady().then(...) bloğunun içinde (genelde BrowserWindow oluşturduktan hemen sonra) registerDashboardIpc() çağrısını ekle:
+
+ts
+Copy code
+app
+  .whenReady()
+  .then(() => {
+    createWindow();
+
+    // ... mevcut IPC kayıtların vs burada olabilir ...
+
+    // Dashboard IPC
+    registerDashboardIpc();
+  })
+  .catch((e) => {
+    console.error("Failed to create window:", e);
+  });
+Not: Dosyanın geri kalanına dokunma. Sadece import + registerDashboardIpc() ekle.
+
+3. Preload – dashboard API köprüsü
+File: src/preload/index.ts
+Bu dosya muhtemelen zaten contextBridge.exposeInMainWorld içinde
+trades, morning, eod, news gibi objeler sunuyor.
+
+En üstte zaten ipcRenderer ve contextBridge import’ları olmalı; yeniden ekleme.
+
+contextBridge.exposeInMainWorld("api", { ... }) içindeki objeye yeni bir dashboard alanı ekle:
+
+ts
+Copy code
+dashboard: {
+  getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),
+},
+Örnek (şema):
+
+ts
+Copy code
+contextBridge.exposeInMainWorld("api", {
+  // ... mevcut alanlar: trades, morning, eod, news, settings, vs ...
+  dashboard: {
+    getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),
+  },
+});
+Eğer preload tarafında api için TypeScript tipi tanımlıysa
+(src/preload/index.d.ts veya benzeri), oraya da aşağıdakine benzer
+bir ek yap:
+
+ts
+Copy code
+export interface DashboardSummary {
+  days: {
+    date: string;
+    label: string;
+    totalR: number;
+    tradeCount: number;
+  }[];
+  totalR: number;
+  totalTrades: number;
+  winrate: number | null;
+  avgRPerTrade: number | null;
+  biasAccuracy: number | null;
+  biasHistory: {
+    date: string;
+    morningBias?: "Long" | "Short" | "Neutral";
+    dayDirection?: "UP" | "DOWN" | "CHOP";
+    status: "hit" | "miss" | "neutral" | "no-data";
+  }[];
+  recentTrades: {
+    id: string;
+    date: string;
+    symbol: string;
+    resultR: number;
+  }[];
+}
+
+declare global {
+  interface Window {
+    api: {
+      // ... mevcut alanlar ...
+      dashboard: {
+        getSummary: () => Promise<DashboardSummary>;
+      };
+    };
+  }
+}
+(Eğer böyle bir tip dosyası yoksa, bu adımı atlayabilirsin; ama eklesen iyi olur.)
+
+4. Dashboard page – gerçek veriyi göster
+File: src/renderer/src/pages/DashboardPage.tsx
+Bu dosyanın tamamını aşağıdaki kodla değiştir:
+
+tsx
+Copy code
+// src/renderer/src/pages/DashboardPage.tsx
+import React, { useEffect, useState } from "react";
+
+// Browser’da global window.api tipi yoksa derleyici kızmasın diye:
+declare global {
+  interface Window {
+    api?: any;
+  }
+}
+
+type BiasStatus = "hit" | "miss" | "neutral" | "no-data";
+
+interface DashboardDaySummary {
+  date: string;
+  label: string;
+  totalR: number;
+  tradeCount: number;
+}
+
+interface BiasHistoryItem {
+  date: string;
+  morningBias?: "Long" | "Short" | "Neutral";
+  dayDirection?: "UP" | "DOWN" | "CHOP";
+  status: BiasStatus;
+}
+
+interface DashboardRecentTrade {
+  id: string;
+  date: string;
+  symbol: string;
+  resultR: number;
+}
+
+interface DashboardSummary {
+  days: DashboardDaySummary[];
+  totalR: number;
+  totalTrades: number;
+  winrate: number | null;
+  avgRPerTrade: number | null;
+  biasAccuracy: number | null;
+  biasHistory: BiasHistoryItem[];
+  recentTrades: DashboardRecentTrade[];
+}
+
+export const DashboardPage: React.FC = () => {
+  const [data, setData] = useState<DashboardSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        if (!window.api?.dashboard?.getSummary) {
+          // API yoksa boş bırak.
+          setLoading(false);
+          return;
+        }
+        const result = await window.api.dashboard.getSummary();
+        if (!cancelled) {
+          setData(result);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.error("Failed to load dashboard summary:", e);
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const weekLabel = "Weekly overview";
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-subtitle">{weekLabel}</p>
+      </div>
+
+      {loading && (
+        <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+          Loading summary…
+        </p>
+      )}
+
+      {!loading && !data && (
+        <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+          No dashboard data yet. Add some trades and EOD reviews.
+        </p>
+      )}
+
+      {!loading && data && (
+        <>
+          {/* Top KPI row */}
+          <div style={styles.kpiRow}>
+            <div className="card" style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Total R (this week)</span>
+              <span
+                style={{
+                  ...styles.kpiValue,
+                  color:
+                    data.totalR > 0
+                      ? "var(--color-green)"
+                      : data.totalR < 0
+                      ? "var(--color-red)"
+                      : "var(--text-primary)",
+                }}
+              >
+                {data.totalR >= 0 ? "+" : ""}
+                {data.totalR.toFixed(2)} R
+              </span>
+            </div>
+
+            <div className="card" style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Winrate</span>
+              <span style={styles.kpiValue}>
+                {data.winrate != null ? `${data.winrate.toFixed(1)} %` : "–"}
+              </span>
+            </div>
+
+            <div className="card" style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Avg R / trade</span>
+              <span style={styles.kpiValue}>
+                {data.avgRPerTrade != null
+                  ? `${data.avgRPerTrade.toFixed(2)} R`
+                  : "–"}
+              </span>
+            </div>
+
+            <div className="card" style={styles.kpiCard}>
+              <span style={styles.kpiLabel}>Bias accuracy (last 10 days)</span>
+              <span style={styles.kpiValue}>
+                {data.biasAccuracy != null
+                  ? `${data.biasAccuracy.toFixed(1)} %`
+                  : "–"}
+              </span>
+            </div>
+          </div>
+
+          {/* Weekly bar row */}
+          <div style={{ marginTop: 24 }}>
+            <h3 style={styles.sectionTitle}>Week by day</h3>
+            <div style={styles.weekRow}>
+              {data.days.map((day) => (
+                <div key={day.date} className="card" style={styles.dayCard}>
+                  <div style={styles.dayHeader}>
+                    <span style={styles.dayLabel}>{day.label}</span>
+                    <span style={styles.dayDate}>
+                      {day.date.slice(5 /* mm-dd */)}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      ...styles.dayResult,
+                      color:
+                        day.totalR > 0
+                          ? "var(--color-green)"
+                          : day.totalR < 0
+                          ? "var(--color-red)"
+                          : "var(--text-secondary)",
+                    }}
+                  >
+                    {day.totalR >= 0 ? "+" : ""}
+                    {day.totalR.toFixed(2)} R
+                  </div>
+                  <div style={styles.dayTrades}>
+                    {day.tradeCount} trade{day.tradeCount === 1 ? "" : "s"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bias history strip */}
+          <div style={{ marginTop: 32 }}>
+            <h3 style={styles.sectionTitle}>Bias history (last 10 days)</h3>
+            <div style={styles.biasStrip}>
+              {data.biasHistory.map((item) => (
+                <div key={item.date} style={styles.biasItem}>
+                  <span style={styles.biasDate}>
+                    {item.date.slice(5 /* mm-dd */)}
+                  </span>
+                  <span style={styles.biasDotWrapper}>
+                    <span
+                      style={{
+                        ...styles.biasDot,
+                        backgroundColor: biasStatusColor(item.status),
+                      }}
+                    />
+                  </span>
+                  <span style={styles.biasLabel}>
+                    {item.morningBias ?? "-"} / {item.dayDirection ?? "-"}
+                  </span>
+                </div>
+              ))}
+              {data.biasHistory.length === 0 && (
+                <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  No bias data yet. Save Morning main bias and EOD day
+                  direction to see accuracy here.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Recent trades list */}
+          <div style={{ marginTop: 32 }}>
+            <h3 style={styles.sectionTitle}>Recent trades</h3>
+            <div className="card" style={styles.recentBox}>
+              {data.recentTrades.length === 0 && (
+                <div style={styles.recentRow}>
+                  <span
+                    style={{ fontSize: 13, color: "var(--text-secondary)" }}
+                  >
+                    No trades yet.
+                  </span>
+                </div>
+              )}
+
+              {data.recentTrades.map((t, idx) => (
+                <div
+                  key={t.id}
+                  style={{
+                    ...styles.recentRow,
+                    borderBottom:
+                      idx === data.recentTrades.length - 1
+                        ? "none"
+                        : "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <div style={styles.recentLeft}>
+                    <span style={styles.recentSymbol}>{t.symbol}</span>
+                    <span style={styles.recentDate}>{t.date}</span>
+                  </div>
+                  <div
+                    style={{
+                      ...styles.recentResult,
+                      color:
+                        t.resultR > 0
+                          ? "var(--color-green)"
+                          : t.resultR < 0
+                          ? "var(--color-red)"
+                          : "var(--text-secondary)",
+                    }}
+                  >
+                    {t.resultR >= 0 ? "+" : ""}
+                    {t.resultR.toFixed(2)} R
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+function biasStatusColor(status: BiasStatus): string {
+  switch (status) {
+    case "hit":
+      return "#22C55E"; // green
+    case "miss":
+      return "#EF4444"; // red
+    case "neutral":
+      return "#9CA3AF"; // gray
+    case "no-data":
+    default:
+      return "#E5E7EB"; // light gray
+  }
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  kpiRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: 16,
+  },
+  kpiCard: {
+    padding: "16px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
+  kpiLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: "var(--text-secondary)",
+  },
+  kpiValue: {
+    fontSize: 20,
+    fontWeight: 700,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    marginBottom: 12,
+    color: "var(--text-primary)",
+  },
+  weekRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 16,
+  },
+  dayCard: {
+    padding: "16px 18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  dayHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  dayLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    color: "var(--text-secondary)",
+  },
+  dayDate: {
+    fontSize: 11,
+    color: "#9CA3AF",
+  },
+  dayResult: {
+    fontSize: 18,
+    fontWeight: 700,
+  },
+  dayTrades: {
+    fontSize: 12,
+    color: "var(--text-secondary)",
+  },
+  biasStrip: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  biasItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "6px 10px",
+    borderRadius: 999,
+    backgroundColor: "#F9FAFB",
+    border: "1px solid var(--border-subtle)",
+    fontSize: 11,
+    gap: 6,
+  },
+  biasDate: {
+    fontWeight: 600,
+    color: "var(--text-secondary)",
+  },
+  biasDotWrapper: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  biasDot: {
+    width: 10,
+    height: 10,
+    borderRadius: "999px",
+  },
+  biasLabel: {
+    color: "var(--text-secondary)",
+  },
+  recentBox: {
+    padding: 0,
+  },
+  recentRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "14px 20px",
+  },
+  recentLeft: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+  },
+  recentSymbol: {
+    fontSize: 14,
+    fontWeight: 600,
+  },
+  recentDate: {
+    fontSize: 12,
+    color: "var(--text-secondary)",
+  },
+  recentResult: {
+    fontSize: 14,
+    fontWeight: 600,
+  },
+};
+5. Son kontrol
+Bu dosyaları kaydettikten sonra:
+
+Projeyi yeniden derleyip çalıştır (npm run dev).
+
+Birkaç trade, Morning main bias ve EOD day direction kaydet.
+
+Dashboard’a dön:
+
+Üstteki 4 kartta gerçek değerler gelmeli.
+
+“Week by day” kutularında her günün toplam R ve trade sayısı görünmeli.
+
+“Bias history” strip’inde son 10 güne ait hit/miss noktaları görülmeli.
+
+“Recent trades” listesinde son işlemler sıralı görünmeli.
