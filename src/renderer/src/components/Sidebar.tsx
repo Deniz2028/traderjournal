@@ -57,6 +57,9 @@ export const Sidebar: React.FC = () => {
                 <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                     Calendar
                 </Link>
+                <Link href="/advanced" style={{ ...styles.navItem, ...(isActive("/advanced") ? styles.navItemActive : {}) }}>
+                    Advanced
+                </Link>
                 <Link href="/news" style={{
                     ...styles.navItem,
                     ...(isActive("/news") ? styles.navItemActive : {}),

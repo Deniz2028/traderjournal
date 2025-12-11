@@ -16,6 +16,7 @@ import {
 } from "./morningMtfStore";
 import type { MorningMtfDaySnapshot } from "../shared/morningMtfTypes";
 import { eodStorage } from "./eodReviewStore";
+import { runMt5Summary } from "./mt5Process";
 
 function createWindow(): void {
     // Create the browser window.

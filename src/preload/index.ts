@@ -55,6 +55,11 @@ const api = {
     },
     dashboard: {
         getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),
+    },
+    mt5Api: {
+        getSummary: (params?: { dateFrom?: string; dateTo?: string }) => {
+            return ipcRenderer.invoke("mt5:getSummary", params ?? {});
+        },
     }
 };
 
