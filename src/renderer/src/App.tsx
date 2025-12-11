@@ -3,6 +3,7 @@ import "./assets/main.css";
 import { Route, Switch, Router } from "wouter";
 
 import { Sidebar } from "./components/Sidebar";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import MorningAnalysisPage from "./pages/MorningAnalysisPage";
 import { TodayPage } from "./pages/TodayPage";
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
                     <Switch>
                         <Route path="/" component={DashboardPage} />
                         <Route path="/dashboard" component={DashboardPage} />
+                        <Route path="/analytics" component={AnalyticsPage} />
                         {/* Date specific morning analysis */}
                         <Route path="/morning/:date" component={MorningAnalysisPage} />
                         <Route path="/morning" component={MorningAnalysisPage} />

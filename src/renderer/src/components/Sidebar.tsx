@@ -44,6 +44,9 @@ export const Sidebar: React.FC = () => {
                 <Link href="/dashboard" style={{ ...styles.navItem, ...(isActive("/dashboard") ? styles.navItemActive : {}) }}>
                     Dashboard
                 </Link>
+                <Link href="/analytics" style={{ ...styles.navItem, ...(isActive("/analytics") ? styles.navItemActive : {}) }}>
+                    Analytics
+                </Link>
                 <Link href="/morning" style={{ ...styles.navItem, ...(isActive("/morning") ? styles.navItemActive : {}) }}>
                     Morning Analysis
                 </Link>
