@@ -169,6 +169,12 @@ app.whenReady().then(() => {
         }
     });
 
+    // MT5 Analysis
+    ipcMain.handle("mt5:getSummary", async (_event, params) => {
+        // params: { dateFrom, dateTo }
+        return await runMt5Summary(params);
+    });
+
     createWindow()
 
     app.on('activate', function () {
