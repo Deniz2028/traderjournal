@@ -247,7 +247,8 @@ export const AdvancedAnalysisPage: React.FC = () => {
                         </div>
                     </div>
                 </div>
-                    {/* Coaching panel */}
+
+                {/* Coaching panel */}
             <div className="card">
                 <h3 style={styles.sectionTitle}>Coach</h3>
                 {coaching ? (

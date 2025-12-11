@@ -32,13 +32,13 @@ export function generateCoachingAdvice(
             );
         }
 
-        if (summary.winrate < 45 && summary.expectancy <= 0) {
+        if (summary.winrate < 45 && summary.expectancyMoney <= 0) {
             bullets.push(
                 "Winrate düşük ve expectancy negatif. Risk/ödül oranını gözden geçirip stop mesafelerini yeniden ayarlamayı düşün.",
             );
         }
 
-        if (summary.maxDrawdown > Math.abs(summary.expectancy) * 20) {
+        if (summary.maxDrawdownMoney > Math.abs(summary.expectancyMoney) * 20) {
             bullets.push(
                 "Max drawdown oldukça yüksek. Pozisyon boyutunu (lot size) küçültmeyi ve eş zamanlı açık işlem sayısını sınırlamayı düşün.",
             );
@@ -75,11 +75,11 @@ export function generateCoachingAdvice(
     }
 
     // Başlık seçimi
-    if (summary && summary.expectancy > 0 && (avgDiscipline ?? 0) >= 70) {
+    if (summary && summary.expectancyMoney > 0 && (avgDiscipline ?? 0) >= 70) {
         headline = "Good edge + solid discipline. Keep compounding.";
-    } else if (summary && summary.expectancy <= 0 && (avgDiscipline ?? 0) >= 70) {
+    } else if (summary && summary.expectancyMoney <= 0 && (avgDiscipline ?? 0) >= 70) {
         headline = "Discipline is there, edge needs refinement.";
-    } else if (summary && summary.expectancy > 0 && (avgDiscipline ?? 0) < 70) {
+    } else if (summary && summary.expectancyMoney > 0 && (avgDiscipline ?? 0) < 70) {
         headline = "You have edge, but discipline is leaking.";
     } else if (avgDiscipline !== null && avgDiscipline < 50) {
         headline = "Fix discipline before adding more size.";
