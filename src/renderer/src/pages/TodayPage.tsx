@@ -727,26 +727,22 @@ export const TodayPage: React.FC = () => {
                             <p className="page-subtitle">Today's trades ({todayISO})</p>
                         </div>
                         <div style={{ display: "flex", gap: 12 }}>
-                            <Link href="/morning">
-                                <a className="nav-button" style={{
-                                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                                    border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
-                                    display: "flex", alignItems: "center", cursor: "pointer",
-                                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                                }}>
-                                    🌅 Morning Analysis
-                                </a>
+                            <Link href="/morning" className="nav-button" style={{
+                                padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                                border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
+                                display: "flex", alignItems: "center", cursor: "pointer",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                            }}>
+                                🌅 Morning Analysis
                             </Link>
 
-                            <Link href={`/eod/${todayISO}`}>
-                                <a className="nav-button" style={{
-                                    padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
-                                    border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
-                                    display: "flex", alignItems: "center", cursor: "pointer",
-                                    boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                                }}>
-                                    🌙 EOD Review
-                                </a>
+                            <Link href={`/eod/${todayISO}`} className="nav-button" style={{
+                                padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                                border: "1px solid var(--border-subtle)", backgroundColor: "#FFFFFF", color: "var(--text-primary)",
+                                display: "flex", alignItems: "center", cursor: "pointer",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
+                            }}>
+                                🌙 EOD Review
                             </Link>
 
                             <button onClick={handleCreateTrade} style={{ backgroundColor: "#111827", color: "#FFFFFF", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500, border: "none", cursor: "pointer" }}>+ Add Trade</button>
