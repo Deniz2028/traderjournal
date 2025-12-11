@@ -116,8 +116,8 @@ function buildDashboardSummary(): DashboardSummaryPayload {
     const morning = loadRawMorning();
     const eods = loadRawEod();
 
-    // DUMMY DATA FALLBACK (If no data exists, show demo data)
-    if (trades.length === 0 && morning.length === 0 && eods.length === 0) {
+    // DUMMY DATA FALLBACK (If no trades exist, show demo data so the user sees something)
+    if (trades.length === 0) {
         return generateDummyDashboard();
     }
 
