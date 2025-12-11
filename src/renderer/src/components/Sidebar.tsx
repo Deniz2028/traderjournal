@@ -47,9 +47,7 @@ export const Sidebar: React.FC = () => {
                 <Link href="/analytics" style={{ ...styles.navItem, ...(isActive("/analytics") ? styles.navItemActive : {}) }}>
                     Analytics
                 </Link>
-                <Link href="/achievements" style={{ ...styles.navItem, ...(isActive("/achievements") ? styles.navItemActive : {}) }}>
-                    Achievements
-                </Link>
+
                 <Link href="/morning" style={{ ...styles.navItem, ...(isActive("/morning") ? styles.navItemActive : {}) }}>
                     Morning Analysis
                 </Link>
@@ -79,6 +77,9 @@ export const Sidebar: React.FC = () => {
 
             {/* Settings at bottom */}
             <nav style={styles.navBottom}>
+                <Link href="/achievements" style={{ ...styles.navItem, ...(isActive("/achievements") ? styles.navItemActive : {}) }}>
+                    Achievements
+                </Link>
                 <Link href="/settings" style={{ ...styles.navItem, ...(isActive("/settings") ? styles.navItemActive : {}) }}>
                     Settings
                 </Link>
