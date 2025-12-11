@@ -75,15 +75,11 @@ export const Sidebar: React.FC = () => {
             {/* Spacer pushes Settings to the very bottom */}
             <div style={{ flexGrow: 1 }} />
 
-            {/* Rules */}
-            <div style={{ padding: "0 12px 4px 12px" }}>
+            {/* Bottom Menu Group (Rules & Achievements) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 12px 12px 12px" }}>
                 <Link href="/rules" style={{ ...styles.navItem, ...(isActive("/rules") ? styles.navItemActive : {}) }}>
                     Rules
                 </Link>
-            </div>
-
-            {/* Achievements above Settings */}
-            <div style={{ padding: "0 12px 12px 12px" }}>
                 <Link href="/achievements" style={{ ...styles.navItem, ...(isActive("/achievements") ? styles.navItemActive : {}) }}>
                     Achievements
                 </Link>
@@ -139,7 +135,9 @@ const styles: Record<string, React.CSSProperties> = {
         color: "var(--text-secondary)",
         fontSize: 14,
         fontWeight: 500,
+        fontWeight: 500,
         transition: "all 0.2s ease",
+        display: "block",
     },
     navItemActive: {
         backgroundColor: "#F3F4F6",
