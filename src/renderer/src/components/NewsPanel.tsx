@@ -172,6 +172,17 @@ export const NewsPanel: React.FC = () => {
         };
     };
 
+    // Check for FOMC
+    const hasFomc = items.some(n =>
+        n.currency === "USD" &&
+        n.impact === "High" &&
+        (
+            n.title.includes("FOMC") ||
+            n.title.includes("Federal Funds Rate") ||
+            n.title.includes("Fed Chair")
+        )
+    );
+
     return (
         <div>
             <div className="page-header" style={{ marginBottom: 16 }}>
@@ -186,6 +197,24 @@ export const NewsPanel: React.FC = () => {
                 {loading && (
                     <div className="card" style={{ padding: 16, fontSize: 13 }}>
                         Loading today&apos;s news...
+                    </div>
+                )}
+
+                {/* FOMC Warning */}
+                {!loading && !error && hasFomc && (
+                    <div className="card" style={{ padding: 16, border: "1px solid #DC2626", backgroundColor: "#FEF2F2" }}>
+                        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                            <div style={{ fontSize: 24, lineHeight: 1 }}>🚨</div>
+                            <div>
+                                <h3 style={{ fontSize: 14, fontWeight: 700, color: "#991B1B", marginBottom: 4 }}>
+                                    FOMC / FED EVENT TODAY
+                                </h3>
+                                <p style={{ fontSize: 13, color: "#B91C1C", fontWeight: 500 }}>
+                                    High impact Fed event detected. Market structure may be messy or ranging.
+                                    <strong> Avoid trading </strong> or reduce risk significantly.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
