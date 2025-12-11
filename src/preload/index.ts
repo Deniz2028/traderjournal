@@ -69,6 +69,7 @@ if (process.contextIsolated) {
         // Legacy exposures if needed, or keeping them for now
         contextBridge.exposeInMainWorld('tjApi', api.trades)
         contextBridge.exposeInMainWorld('journalMorning', api.morning)
+        contextBridge.exposeInMainWorld('mt5Api', api.mt5Api)
         // expose eod? api.eodApi is available under window.api.eodApi
     } catch (error) {
         console.error(error)
@@ -80,6 +81,8 @@ if (process.contextIsolated) {
     window.tjApi = api.trades
     // @ts-ignore
     window.journalMorning = api.morning
+    // @ts-ignore
+    window.mt5Api = api.mt5Api
 }
 
 export type TjApi = typeof tjApi;
