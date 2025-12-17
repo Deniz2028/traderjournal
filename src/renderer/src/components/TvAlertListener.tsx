@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { getAlertSettings } from '../utils/settingsStorage';
 
 interface Notification {
     id: string;
@@ -22,10 +23,16 @@ export const TvAlertListener: React.FC = () => {
                 { event: 'INSERT', schema: 'public', table: 'notifications' },
                 (payload) => {
                     const newAlert = payload.new as Notification;
+
+                    const settings = getAlertSettings();
+                    if (!settings.enabled) return; // Alerts disabled globally
+
                     triggerToast(newAlert);
 
-                    // Trigger Text-to-Speech
-                    speakMessage(`${newAlert.title}. ${newAlert.message}`);
+                    // Trigger Text-to-Speech if enabled
+                    if (settings.ttsEnabled) {
+                        speakMessage(`${newAlert.title}. ${newAlert.message}`);
+                    }
 
                     // Optional: Keep a history of recent alerts
                     setAlerts(prev => [newAlert, ...prev].slice(0, 5));

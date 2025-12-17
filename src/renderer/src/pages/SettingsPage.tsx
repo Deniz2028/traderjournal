@@ -13,6 +13,11 @@ import {
   type MorningMtfSettings,
   getTimeframesForSymbol,
 } from "../utils/morningMtfSettings";
+import {
+  getAlertSettings,
+  saveAlertSettings,
+  type AlertSettings,
+} from "../utils/settingsStorage";
 
 
 
@@ -22,6 +27,7 @@ import {
 export const SettingsPage: React.FC = () => {
   const [dashboardSymbols, setDashboardSymbols] = useState<string[]>([]);
   const [mtfSettings, setMtfSettings] = useState<MorningMtfSettings>({});
+  const [alertSettings, setAlertSettings] = useState<AlertSettings>({ enabled: true, ttsEnabled: true });
 
   // For UI state - which instrument we are editing MTF settings for
   const [activeSymbol, setActiveSymbol] = useState<string>("XAUUSD");
@@ -42,6 +48,7 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     setDashboardSymbols(getDashboardInstruments());
     setMtfSettings(loadMorningMtfSettings());
+    setAlertSettings(getAlertSettings());
   }, []);
 
   const toggleDashboardSymbol = (symbol: string) => {
@@ -85,6 +92,7 @@ export const SettingsPage: React.FC = () => {
   const handleSave = () => {
     saveDashboardInstruments(dashboardSymbols);
     saveMorningMtfSettings(mtfSettings);
+    saveAlertSettings(alertSettings);
     alert("Settings saved!");
   };
 
@@ -156,6 +164,45 @@ export const SettingsPage: React.FC = () => {
             {dashboardSymbols.length === 0 && (
               <span style={{ fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>No instruments selected.</span>
             )}
+          </div>
+        </div>
+
+        {/* Notification Settings */}
+        <div className="card">
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+            Notifications & Alerts
+          </h3>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+            Configure real-time trading alerts.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={alertSettings.enabled}
+                onChange={(e) => setAlertSettings(prev => ({ ...prev, enabled: e.target.checked }))}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Enable Alerts</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Show pop-up notifications for new signals</div>
+              </div>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", opacity: alertSettings.enabled ? 1 : 0.5 }}>
+              <input
+                type="checkbox"
+                checked={alertSettings.ttsEnabled}
+                onChange={(e) => setAlertSettings(prev => ({ ...prev, ttsEnabled: e.target.checked }))}
+                disabled={!alertSettings.enabled}
+                style={{ width: 18, height: 18 }}
+              />
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Enable Text-to-Speech (Voice)</div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>Read out the alert content aloud</div>
+              </div>
+            </label>
           </div>
         </div>
 
