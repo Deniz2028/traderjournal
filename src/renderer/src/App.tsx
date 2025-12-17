@@ -2,6 +2,7 @@ import React from "react";
 import "./assets/main.css";
 import { ThemeProvider } from "./context/ThemeContext";
 import { Route, Switch, Router } from "wouter";
+import { useHashLocation } from "./hooks/useHashLocation";
 
 import { Sidebar } from "./components/Sidebar";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
@@ -21,7 +22,7 @@ import { TvAlertListener } from "./components/TvAlertListener";
 export const App: React.FC = () => {
     return (
         <ThemeProvider>
-            <Router>
+            <Router hook={useHashLocation}>
                 <div className="app-container">
                     <Sidebar />
                     <main className="main-content">
