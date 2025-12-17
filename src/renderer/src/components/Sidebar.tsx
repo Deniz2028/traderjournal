@@ -105,6 +105,9 @@ export const Sidebar: React.FC = () => {
                     <Link href="/today" style={{ ...styles.navItem, ...(isActive("/today") ? styles.navItemActive : {}) }}>
                         Daily Journal
                     </Link>
+                    <Link href="/collab" style={{ ...styles.navItem, ...(isActive("/collab") ? styles.navItemActive : {}) }}>
+                        War Room ⚔️
+                    </Link>
                     <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                         Calendar
                     </Link>

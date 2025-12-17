@@ -2,10 +2,13 @@
 // src/renderer/src/pages/MorningAnalysisPage.tsx
 import React, { useEffect, useState } from "react";
 import { useRoute } from "wouter";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../context/AuthContext";
 
 import {
     fetchMorningForDate,
     saveMorningForDate,
+    deleteMorningForDate,
 } from "../utils/morningMtfClient";
 import type {
     MorningMtfBias,
@@ -47,11 +50,20 @@ const MorningAnalysisPage: React.FC = () => {
     const [match, params] = useRoute("/morning/:date");
     const todayISO = getAppToday();
     const dateISO = match && params?.date ? params.date : todayISO;
+    const { user } = useAuth();
 
     const [snapshot, setSnapshot] = useState<MorningMtfDaySnapshot | null>(null);
     const [activeTfBySymbol, setActiveTfBySymbol] = useState<Record<string, TF>>({});
     const [lightboxImage, setLightboxImage] = useState<string | null>(null);
     const [settingsLoaded, setSettingsLoaded] = useState(false);
+    // Default to view mode if instruments exist, else edit
+    const [isViewMode, setIsViewMode] = useState(false);
+
+    useEffect(() => {
+        if (snapshot && snapshot.instruments.length > 0) {
+            setIsViewMode(true);
+        }
+    }, [settingsLoaded]);
 
     const handleAddInstrument = () => {
         const newInst: MorningMtfInstrumentSnapshot = {
@@ -132,10 +144,12 @@ const MorningAnalysisPage: React.FC = () => {
             if (!prev) return prev;
             const newInstruments = [...prev.instruments];
             newInstruments[index] = updater(newInstruments[index]);
-            return {
+            const updated = {
                 ...prev,
                 instruments: newInstruments,
             };
+            saveMorningForDate(updated).catch(console.error); // Auto-save on edit
+            return updated;
         });
     };
 
@@ -158,10 +172,44 @@ const MorningAnalysisPage: React.FC = () => {
         });
     };
 
+    const handleDeleteDay = async () => {
+        if (!confirm("Are you sure you want to delete this ENTIRE morning analysis? This cannot be undone.")) return;
+        await deleteMorningForDate(dateISO);
+        setSnapshot({ date: dateISO, instruments: [] });
+        setIsViewMode(false); // Go back to edit mode (empty)
+    };
+
     const handleSaveAll = async () => {
         if (!snapshot) return;
         await saveMorningForDate(snapshot);
+        setIsViewMode(true); // Switch to View Mode on save
         alert("Morning analysis saved.");
+    };
+
+    const handleShare = async (inst: MorningMtfInstrumentSnapshot, activeTf: TF, activeState: any) => {
+        if (!user) {
+            alert("Please login to War Room first!");
+            return;
+        }
+
+        const notes = activeState.notes || `Daily Bias: ${inst.dailyBias}`;
+
+        const { error } = await supabase.from('shared_analyses').insert({
+            user_id: user.id,
+            pair: inst.symbol || "Unknown",
+            timeframe: activeTf,
+            bias: activeState.bias === "neutral" ? (inst.dailyBias === "neutral" ? "Neutral" : biasLabel[inst.dailyBias]) : biasLabel[activeState.bias],
+            notes: notes,
+            image_url: activeState.chartUrl, // We trust this is a valid URL or null
+            instrument_data: inst, // Send full snapshot
+            likes: 0
+        });
+
+        if (error) {
+            alert("Failed to share: " + error.message);
+        } else {
+            alert("Shared to War Room! ⚔️");
+        }
     };
 
     return (
@@ -190,7 +238,7 @@ const MorningAnalysisPage: React.FC = () => {
 
                     // Meta info
                     const meta = INSTRUMENTS_META.find(m => m.symbol === inst.symbol);
-                    const title = meta ? meta.title : inst.symbol;
+                    const title = meta ? meta.title : (inst.symbol || "Instrument");
                     const subtitle = meta ? meta.subtitle : "Analysis";
 
                     if (!active) return null;
@@ -227,7 +275,7 @@ const MorningAnalysisPage: React.FC = () => {
                     };
 
                     const handleDelete = () => {
-                        // Direct delete, no confirm (undo better, but for now simple)
+                        if (!confirm(`Remove ${inst.symbol || "this instrument"}?`)) return;
                         setSnapshot((prev) => {
                             if (!prev) return prev;
                             const newInst = prev.instruments.filter((i) => i.id !== inst.id);
@@ -241,37 +289,27 @@ const MorningAnalysisPage: React.FC = () => {
                         <div key={inst.id || index} className="card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
                             {/* Header */}
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => moveInstrument(index, -1)}
-                                            disabled={index === 0}
-                                            style={{
-                                                border: "none", background: "none", cursor: "pointer",
-                                                fontSize: 10, padding: 0, color: index === 0 ? "#E5E7EB" : "var(--text-secondary)"
-                                            }}
-                                            title="Move Up"
-                                        >
-                                            ▲
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => moveInstrument(index, 1)}
-                                            disabled={index === snapshot.instruments.length - 1}
-                                            style={{
-                                                border: "none", background: "none", cursor: "pointer",
-                                                fontSize: 10, padding: 0, color: index === snapshot.instruments.length - 1 ? "#E5E7EB" : "var(--text-secondary)"
-                                            }}
-                                            title="Move Down"
-                                        >
-                                            ▼
-                                        </button>
-                                    </div>
+                                <div style={{ display: "flex", gap: 8, alignItems: 'center' }}>
+                                    {!isViewMode && (
+                                        <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 2 }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => moveInstrument(index, -1)}
+                                                disabled={index === 0}
+                                                style={{ border: "none", background: "none", cursor: "pointer", fontSize: 10, padding: 0, color: index === 0 ? "#E5E7EB" : "var(--text-secondary)" }}
+                                            >▲</button>
+                                            <button
+                                                type="button"
+                                                onClick={() => moveInstrument(index, 1)}
+                                                disabled={index === snapshot.instruments.length - 1}
+                                                style={{ border: "none", background: "none", cursor: "pointer", fontSize: 10, padding: 0, color: index === snapshot.instruments.length - 1 ? "#E5E7EB" : "var(--text-secondary)" }}
+                                            >▼</button>
+                                        </div>
+                                    )}
 
                                     {/* Title / Selector */}
                                     <div style={{ minWidth: 200 }}>
-                                        {inst.symbol === "" ? (
+                                        {!isViewMode && inst.symbol === "" ? (
                                             <select
                                                 autoFocus
                                                 value=""
@@ -281,122 +319,94 @@ const MorningAnalysisPage: React.FC = () => {
                                                     updateInstrument(index, (cur) => ({ ...cur, symbol: val }));
                                                     setActiveTfBySymbol((prev) => ({ ...prev, [val]: "4H" }));
                                                 }}
-                                                style={{
-                                                    fontSize: 14, fontWeight: 600, padding: "8px", width: "100%",
-                                                    borderRadius: 6, border: "1px solid var(--accent-primary)", outline: "none",
-                                                    backgroundColor: "var(--bg-input)", color: "var(--text-primary)"
-                                                }}
+                                                style={{ fontSize: 14, fontWeight: 600, padding: "8px", width: "100%", borderRadius: 6, border: "1px solid var(--accent-primary)", outline: "none", backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }}
                                             >
                                                 <option value="">Select Instrument...</option>
                                                 {INSTRUMENTS_META.map((m) => (
-                                                    <option key={m.symbol} value={m.symbol}>
-                                                        {m.title}
-                                                    </option>
+                                                    <option key={m.symbol} value={m.symbol}>{m.title}</option>
                                                 ))}
                                             </select>
                                         ) : (
                                             <div>
-                                                <h2 style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
+                                                <h2 style={{ fontSize: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
                                                     {title}
-                                                    <button
-                                                        onClick={() => updateInstrument(index, c => ({ ...c, symbol: "" }))}
-                                                        style={{ fontSize: 12, opacity: 0.4, border: "none", background: "none", cursor: "pointer" }}
-                                                        title="Change Symbol"
-                                                    >
-                                                        ✎
-                                                    </button>
+                                                    {!isViewMode && (
+                                                        <button onClick={() => updateInstrument(index, c => ({ ...c, symbol: "" }))} style={{ fontSize: 12, opacity: 0.4, border: "none", background: "none", cursor: "pointer" }} title="Change Instrument">✎</button>
+                                                    )}
+                                                    {isViewMode && (
+                                                        <button
+                                                            onClick={() => setIsViewMode(false)}
+                                                            style={{
+                                                                fontSize: 12, padding: '2px 8px', borderRadius: 4,
+                                                                border: '1px solid var(--border-subtle)',
+                                                                backgroundColor: 'var(--bg-card)',
+                                                                color: 'var(--text-secondary)',
+                                                                cursor: 'pointer',
+                                                                fontWeight: 400
+                                                            }}
+                                                            title="Edit Mode"
+                                                        >
+                                                            ✎ Edit
+                                                        </button>
+                                                    )}
                                                 </h2>
-                                                <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-                                                    {subtitle}
-                                                </p>
+                                                <p style={{ fontSize: 12, color: "var(--text-secondary)" }}>{subtitle}</p>
                                             </div>
                                         )}
                                     </div>
                                 </div>
 
-                                {/* Right: Daily Bias + Delete */}
-                                <div style={{ display: 'flex', gap: 16 }}>
+                                {/* Right: Daily Bias + Actions */}
+                                <div style={{ display: 'flex', gap: 16, alignItems: 'start' }}>
                                     <div style={{ textAlign: "right" }}>
-                                        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>
-                                            Daily bias
-                                        </div>
+                                        <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 4 }}>Daily bias</div>
                                         <div style={{ fontSize: 18, fontWeight: 700, color: biasColor[inst.dailyBias] }}>
                                             {biasLabel[inst.dailyBias].toUpperCase()}
                                         </div>
-                                        <div style={{ marginTop: 8, display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                                            {(["long", "neutral", "short"] as Bias[]).map((b) => (
-                                                <button
-                                                    key={b}
-                                                    type="button"
-                                                    onClick={() => onChangeDailyBias(b)}
-                                                    style={{
-                                                        padding: "4px 10px",
-                                                        borderRadius: 999,
-                                                        fontSize: 11,
-                                                        border:
-                                                            inst.dailyBias === b
-                                                                ? "1px solid var(--accent-primary)"
-                                                                : "1px solid var(--border-subtle)",
-                                                        backgroundColor:
-                                                            inst.dailyBias === b ? (b === 'long' ? 'var(--bg-long-subtle)' : b === 'short' ? 'var(--bg-short-subtle)' : 'var(--bg-neutral-subtle)') : "var(--bg-card)",
-                                                        color: "var(--text-primary)",
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    {biasLabel[b]}
-                                                </button>
-                                            ))}
-                                        </div>
+
+                                        {!isViewMode && (
+                                            <div style={{ marginTop: 8, display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                                                {(["long", "neutral", "short"] as Bias[]).map((b) => (
+                                                    <button
+                                                        key={b}
+                                                        type="button"
+                                                        onClick={() => onChangeDailyBias(b)}
+                                                        style={{
+                                                            padding: "4px 10px", borderRadius: 999, fontSize: 11,
+                                                            border: inst.dailyBias === b ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                                                            backgroundColor: inst.dailyBias === b ? (b === 'long' ? 'var(--bg-long-subtle)' : b === 'short' ? 'var(--bg-short-subtle)' : 'var(--bg-neutral-subtle)') : "var(--bg-card)",
+                                                            color: "var(--text-primary)", cursor: "pointer",
+                                                        }}
+                                                    >{biasLabel[b]}</button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <button
-                                        onClick={handleDelete}
-                                        style={{
-                                            height: 28, width: 28, borderRadius: 6, border: "none",
-                                            background: "#FEF2F2", color: "#B91C1C", cursor: "pointer",
-                                            display: "flex", alignItems: "center", justifyContent: "center",
-                                            alignSelf: "start"
-                                        }}
-                                        title="Remove Instrument"
-                                    >
-                                        ×
-                                    </button>
+                                    {!isViewMode && (
+                                        <button onClick={handleDelete} style={{ height: 28, width: 28, borderRadius: 6, border: "none", background: "#FEF2F2", color: "#B91C1C", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "end" }} title="Remove Instrument">×</button>
+                                    )}
+                                    {isViewMode && inst.symbol && (
+                                        <button onClick={() => handleShare(inst, activeTf, active)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', marginTop: 4 }}>🚀 Share</button>
+                                    )}
                                 </div>
                             </div>
 
                             {/* Timeframe tabs */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    gap: 8,
-                                    borderBottom: "1px solid var(--border-subtle)",
-                                    paddingBottom: 8,
-                                    overflowX: "auto"
-                                }}
-                            >
+                            <div style={{ display: "flex", gap: 8, borderBottom: "1px solid var(--border-subtle)", paddingBottom: 8, overflowX: "auto" }}>
                                 {tfs.map((tf) => {
                                     const isActive = tf.tf === active.tf;
                                     return (
                                         <button
                                             key={tf.tf}
                                             type="button"
-                                            onClick={() =>
-                                                setActiveTfBySymbol((prev) => ({
-                                                    ...prev,
-                                                    [inst.symbol]: tf.tf,
-                                                }))
-                                            }
+                                            onClick={() => setActiveTfBySymbol((prev) => ({ ...prev, [inst.symbol]: tf.tf }))}
                                             style={{
-                                                padding: "6px 12px",
-                                                borderRadius: 999,
-                                                fontSize: 12,
-                                                border: isActive
-                                                    ? "1px solid var(--accent-primary)"
-                                                    : "1px solid var(--border-subtle)",
+                                                padding: "6px 12px", borderRadius: 999, fontSize: 12,
+                                                border: isActive ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
                                                 backgroundColor: isActive ? "var(--bg-element)" : "var(--bg-card)",
-                                                color: "var(--text-primary)",
-                                                cursor: "pointer",
-                                                whiteSpace: "nowrap"
+                                                color: "var(--text-primary)", cursor: "pointer", whiteSpace: "nowrap",
+                                                fontWeight: isActive ? 600 : 400
                                             }}
                                         >
                                             {tf.tf} · {biasLabel[tf.bias]}
@@ -405,144 +415,123 @@ const MorningAnalysisPage: React.FC = () => {
                                 })}
                             </div>
 
-                            {/* Link input + image preview */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600 }}>
-                                    {active.tf} chart link
-                                </div>
-                                <input
-                                    placeholder="Paste TradingView snapshot URL (.png)"
-                                    value={active.chartUrl}
-                                    onChange={(e) => onChangeChartUrl(active.tf, e.target.value)}
-                                    style={{
-                                        width: "100%",
-                                        padding: "8px 10px",
-                                        borderRadius: 6,
-                                        border: "1px solid var(--border-subtle)",
-                                        fontSize: 13,
-                                        fontFamily: "inherit",
-                                        backgroundColor: "var(--bg-input)",
-                                        color: "var(--text-primary)"
-                                    }}
-                                />
+                            {/* isViewMode Content */}
+                            {isViewMode ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                    {/* Read Only View */}
+                                    {active.chartUrl ? (
+                                        <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #E5E7EB", cursor: "zoom-in" }} onClick={() => setLightboxImage(active.chartUrl)}>
+                                            <img src={active.chartUrl} alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: 32, textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: 12, color: 'var(--text-tertiary)', fontSize: 13 }}>
+                                            No chart for {active.tf}
+                                        </div>
+                                    )}
 
-                                {/* Preview */}
-                                {active.chartUrl && (
-                                    <div
-                                        style={{
-                                            borderRadius: 12,
-                                            overflow: "hidden",
-                                            border: "1px solid #E5E7EB",
-                                            cursor: "zoom-in"
-                                        }}
-                                        onClick={() => setLightboxImage(active.chartUrl)}
-                                    >
-                                        <img
-                                            src={active.chartUrl}
-                                            alt={`${inst.symbol} ${active.tf} chart`}
-                                            style={{
-                                                width: "100%",
-                                                maxHeight: 400,
-                                                objectFit: "contain",
-                                                display: "block",
-                                                backgroundColor: "var(--bg-page)"
-                                            }}
-                                        />
+                                    {active.notes && (
+                                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: 16, borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+                                            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase' }}>Strategy / Notes ({active.tf})</div>
+                                            <div style={{ fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{active.notes}</div>
+                                        </div>
+                                    )}
+
+                                    {!active.notes && !active.chartUrl && (
+                                        <div style={{ fontSize: 13, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Empty analysis for this timeframe.</div>
+                                    )}
+                                </div>
+                            ) : (
+                                /* Edit Mode Content (Legacy inputs) */
+                                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600 }}>{active.tf} chart link</div>
+                                    <input placeholder="Paste TradingView snapshot URL (.png)" value={active.chartUrl} onChange={(e) => onChangeChartUrl(active.tf, e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 6, border: "1px solid var(--border-subtle)", fontSize: 13, fontFamily: "inherit", backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }} />
+
+                                    {active.chartUrl && (
+                                        <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #E5E7EB", cursor: "zoom-in" }} onClick={() => setLightboxImage(active.chartUrl)}>
+                                            <img src={active.chartUrl} alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 400, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600 }}>Bias for this TF</div>
+                                        <div style={{ display: "flex", gap: 6 }}>
+                                            {(["long", "neutral", "short"] as Bias[]).map((b) => {
+                                                const isActive = active.bias === b;
+                                                return (
+                                                    <button key={b} type="button" onClick={() => onChangeTfBias(active.tf, b)} style={{ padding: "4px 10px", borderRadius: 999, fontSize: 11, border: isActive ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)", backgroundColor: isActive ? "var(--bg-element)" : "var(--bg-card)", color: "var(--text-primary)", cursor: "pointer" }}>{biasLabel[b]}</button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Bias + notes */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600 }}>Bias for this TF</div>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                    {(["long", "neutral", "short"] as Bias[]).map((b) => {
-                                        const isActive = active.bias === b;
-                                        return (
-                                            <button
-                                                key={b}
-                                                type="button"
-                                                onClick={() => onChangeTfBias(active.tf, b)}
-                                                style={{
-                                                    padding: "4px 10px",
-                                                    borderRadius: 999,
-                                                    fontSize: 11,
-                                                    border: isActive
-                                                        ? "1px solid var(--accent-primary)"
-                                                        : "1px solid var(--border-subtle)",
-                                                    backgroundColor: isActive ? "var(--bg-element)" : "var(--bg-card)",
-                                                    color: "var(--text-primary)",
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                {biasLabel[b]}
-                                            </button>
-                                        );
-                                    })}
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 600 }}>Notes / commentary ({active.tf})</div>
+                                        <textarea placeholder="Bias, key levels, what you expect today..." value={active.notes} onChange={(e) => onChangeNotes(active.tf, e.target.value)} rows={4} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: "1px solid var(--border-subtle)", resize: "vertical", fontSize: 13, fontFamily: "inherit", backgroundColor: "var(--bg-input)", color: "var(--text-primary)" }} />
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                                <div style={{ fontSize: 12, fontWeight: 600 }}>
-                                    Notes / commentary ({active.tf})
-                                </div>
-                                <textarea
-                                    placeholder="Bias, key levels, what you expect today..."
-                                    value={active.notes}
-                                    onChange={(e) => onChangeNotes(active.tf, e.target.value)}
-                                    rows={4}
-                                    style={{
-                                        width: "100%",
-                                        padding: "8px 10px",
-                                        borderRadius: 8,
-                                        border: "1px solid var(--border-subtle)",
-                                        resize: "vertical",
-                                        fontSize: 13,
-                                        fontFamily: "inherit",
-                                        backgroundColor: "var(--bg-input)",
-                                        color: "var(--text-primary)"
-                                    }}
-                                />
-                            </div>
+                            )}
                         </div>
                     );
                 })}
             </div>
 
             {/* Add Instrument Section */}
-            <div style={{ marginTop: 24 }}>
-                <button
-                    onClick={handleAddInstrument}
-                    style={{
-                        width: "100%", padding: 16, borderRadius: 8,
-                        border: "2px dashed var(--border-subtle)",
-                        color: "var(--text-secondary)", fontWeight: 600,
-                        backgroundColor: "transparent", cursor: "pointer",
-                        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                        fontSize: 13
-                    }}
-                >
-                    <span>+ Add Instrument</span>
-                </button>
-            </div>
+            {!isViewMode && (
+                <div style={{ marginTop: 24 }}>
+                    <button
+                        onClick={handleAddInstrument}
+                        style={{
+                            width: "100%", padding: 16, borderRadius: 8,
+                            border: "2px dashed var(--border-subtle)",
+                            color: "var(--text-secondary)", fontWeight: 600,
+                            backgroundColor: "transparent", cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                            fontSize: 13
+                        }}
+                    >
+                        <span>+ Add Instrument</span>
+                    </button>
+                </div>
+            )}
 
-            <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
-                <button
-                    type="button"
-                    onClick={handleSaveAll}
-                    style={{
-                        backgroundColor: "var(--accent-primary)",
-                        color: "#FFFFFF",
-                        padding: "8px 18px",
-                        borderRadius: 999,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        marginBottom: 32
-                    }}
-                >
-                    Save morning snapshot
-                </button>
+            <div style={{ marginTop: 24, display: "flex", justifyContent: "space-between", marginBottom: 32 }}>
+                {!isViewMode && (
+                    <button
+                        type="button"
+                        onClick={handleDeleteDay}
+                        style={{
+                            backgroundColor: "transparent",
+                            color: "#EF4444",
+                            padding: "8px 18px",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            border: '1px solid #EF4444'
+                        }}
+                    >
+                        🗑️ Delete Day
+                    </button>
+                )}
+
+                {snapshot.instruments.length > 0 && !isViewMode && (
+                    <button
+                        type="button"
+                        onClick={handleSaveAll}
+                        style={{
+                            backgroundColor: "var(--accent-primary)",
+                            color: "#FFFFFF",
+                            padding: "8px 18px",
+                            borderRadius: 999,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            marginLeft: 'auto'
+                        }}
+                    >
+                        Save & View
+                    </button>
+                )}
             </div>
 
             {/* Lightbox Modal */}

@@ -33,6 +33,7 @@ const api = {
     morningMtf: {
         getForDate: (date: string) => ipcRenderer.invoke('morningMtf:getForDate', date),
         saveForDate: (snapshot: any) => ipcRenderer.invoke('morningMtf:saveForDate', snapshot),
+        deleteForDate: (date: string) => ipcRenderer.invoke('morningMtf:deleteForDate', date),
         getForMonth: (year: number, month: number) => ipcRenderer.invoke('morningMtf:getForMonth', { year, month })
     },
     eodApi: {
@@ -67,6 +68,11 @@ const api = {
         getSummary: (params?: { dateFrom?: string; dateTo?: string }) => {
             return ipcRenderer.invoke("mt5:getSummary", params ?? {});
         },
+    },
+    auth: {
+        setItem: (key: string, value: string) => ipcRenderer.invoke("auth:setItem", { key, value }),
+        getItem: (key: string) => ipcRenderer.invoke("auth:getItem", key),
+        removeItem: (key: string) => ipcRenderer.invoke("auth:removeItem", key),
     }
 };
 

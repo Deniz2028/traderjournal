@@ -15,6 +15,10 @@ export function saveMorningForDate(snapshot: MorningMtfDaySnapshot) {
     return getApi().saveForDate(snapshot);
 }
 
+export function deleteMorningForDate(date: string) {
+    return getApi().deleteForDate(date);
+}
+
 export function fetchMorningForMonth(year: number, month: number) {
     return getApi().getForMonth(year, month);
 }

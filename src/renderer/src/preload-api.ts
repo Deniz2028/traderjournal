@@ -10,6 +10,7 @@ export type { Trade };
 export interface MorningMtfApi {
     getForDate(date: string): Promise<MorningMtfDaySnapshot | null>;
     saveForDate(snapshot: MorningMtfDaySnapshot): Promise<void>;
+    deleteForDate(date: string): Promise<void>;
     getForMonth(year: number, month: number): Promise<MorningMtfDaySnapshot[]>;
 }
 
@@ -40,6 +41,11 @@ export interface Api {
     backup: BackupApi;
     dashboard: {
         getSummary(): Promise<any>;
+    };
+    auth: {
+        setItem(key: string, value: string): Promise<void>;
+        getItem(key: string): Promise<string | null>;
+        removeItem(key: string): Promise<void>;
     };
 }
 

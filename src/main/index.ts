@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import fs from 'fs';
 import {
     loadTrades,
     addTrade as repoAddTrade,
@@ -127,8 +128,18 @@ app.whenReady().then(() => {
     let lastNewsFetchTime: number = 0;
     const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
+    // Backoff state
+    let rateLimitedUntil: number = 0;
+
     ipcMain.handle("news:getThisWeek", async () => {
         try {
+            // Check backoff
+            if (Date.now() < rateLimitedUntil) {
+                console.warn("News API rate limited. Returning empty/cached or error.");
+                // Return cached if available, else empty (don't throw to avoid UI crashes)
+                return cachedNewsData || [];
+            }
+
             // Check cache
             if (cachedNewsData && (Date.now() - lastNewsFetchTime < CACHE_DURATION)) {
                 return cachedNewsData;
@@ -145,6 +156,14 @@ app.whenReady().then(() => {
                         data += chunk;
                     });
                     response.on("end", () => {
+                        if (response.statusCode === 429) {
+                            console.error("News API Rate Limit Hit (429). Backing off for 10 mins.");
+                            rateLimitedUntil = Date.now() + (10 * 60 * 1000); // 10 min backoff
+                            // Resolve with cache or empty to prevent client crash
+                            resolve(cachedNewsData || []);
+                            return;
+                        }
+
                         if (response.statusCode >= 200 && response.statusCode < 300) {
                             try {
                                 const parsed = JSON.parse(data);
@@ -166,7 +185,8 @@ app.whenReady().then(() => {
             });
         } catch (error) {
             console.error("News fetch error:", error);
-            throw error;
+            // Return empty array on error to keep UI stable
+            return [];
         }
     });
 
@@ -183,6 +203,63 @@ app.whenReady().then(() => {
 
     ipcMain.handle("backup:import", async (_event) => {
         return await importAllData();
+    });
+
+    // --- Custom Auth Storage (File Based) ---
+    // This solves the issue where localStorage is wiped or not persisted reliable
+    const authStorePath = join(app.getPath('userData'), 'supabase-auth-store.json');
+
+    ipcMain.handle('auth:setItem', async (_, { key, value }) => {
+        try {
+            let store: Record<string, string> = {};
+            if (fs.existsSync(authStorePath)) {
+                try {
+                    const content = fs.readFileSync(authStorePath, 'utf-8');
+                    if (content.trim()) {
+                        store = JSON.parse(content);
+                    }
+                } catch (e) {
+                    console.error("Failed to parse auth store, resetting:", e);
+                    store = {};
+                }
+            }
+            store[key] = value;
+            fs.writeFileSync(authStorePath, JSON.stringify(store, null, 2));
+        } catch (e) {
+            console.error('Auth Store Write Error:', e);
+        }
+    });
+
+    ipcMain.handle('auth:getItem', async (_, key) => {
+        try {
+            if (fs.existsSync(authStorePath)) {
+                try {
+                    const content = fs.readFileSync(authStorePath, 'utf-8');
+                    if (!content.trim()) return null;
+                    const store = JSON.parse(content);
+                    return store[key] || null;
+                } catch (e) {
+                    console.error("Failed to parse auth store on read:", e);
+                    return null;
+                }
+            }
+            return null;
+        } catch (e) {
+            console.error('Auth Store Read Error:', e);
+            return null;
+        }
+    });
+
+    ipcMain.handle('auth:removeItem', async (_, key) => {
+        try {
+            if (fs.existsSync(authStorePath)) {
+                const store = JSON.parse(fs.readFileSync(authStorePath, 'utf-8'));
+                delete store[key];
+                fs.writeFileSync(authStorePath, JSON.stringify(store));
+            }
+        } catch (e) {
+            console.error('Auth Store Delete Error:', e);
+        }
     });
 
     createWindow()

@@ -43,6 +43,14 @@ export function saveMorningMtfForDate(snapshot: MorningMtfDaySnapshot): void {
     writeStore(store);
 }
 
+export function deleteMorningMtfForDate(date: string): void {
+    const store = readStore();
+    if (store[date]) {
+        delete store[date];
+        writeStore(store);
+    }
+}
+
 export function getMorningMtfForMonth(
     year: number,
     month: number, // 1-12

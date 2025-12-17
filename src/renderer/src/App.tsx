@@ -8,14 +8,15 @@ import { AnalyticsPage } from "./pages/AnalyticsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import MorningAnalysisPage from "./pages/MorningAnalysisPage";
 import { TodayPage } from "./pages/TodayPage";
-import CalendarPage from "./pages/CalendarPage"; // Note: CalendarPage is default export now
-
+import CalendarPage from "./pages/CalendarPage";
 import { AchievementsPage } from "./pages/AchievementsPage";
 import { RulesPage } from "./pages/RulesPage";
 import { AdvancedAnalysisPage } from "./pages/AdvancedAnalysisPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { EodReviewPage as EODReviewPage } from "./pages/EODReviewPage";
+import { CollabPage } from "./pages/CollabPage";
 import { NewsPanel } from "./components/NewsPanel";
+import { TvAlertListener } from "./components/TvAlertListener";
 
 export const App: React.FC = () => {
     return (
@@ -31,16 +32,18 @@ export const App: React.FC = () => {
                             <Route path="/advanced" component={AdvancedAnalysisPage} />
                             <Route path="/rules" component={RulesPage} />
                             <Route path="/achievements" component={AchievementsPage} />
+
                             {/* Date specific morning analysis */}
                             <Route path="/morning/:date" component={MorningAnalysisPage} />
                             <Route path="/morning" component={MorningAnalysisPage} />
-                            {/* If we want date param support in future: <Route path="/morning/:date" ... /> */}
 
                             <Route path="/today" component={TodayPage} />
                             <Route path="/calendar" component={CalendarPage} />
-                            <Route path="/calendar" component={CalendarPage} />
                             <Route path="/eod/:date" component={EODReviewPage} />
+                            <Route path="/collab" component={CollabPage} />
                             <Route path="/settings" component={SettingsPage} />
+
+                            {/* News route if want to view full page, though we have panel now */}
                             <Route path="/news">
                                 <div style={{ padding: 24 }}>
                                     <NewsPanel />
@@ -53,6 +56,9 @@ export const App: React.FC = () => {
                             </Route>
                         </Switch>
                     </main>
+
+                    {/* Global Components */}
+                    <TvAlertListener />
                 </div>
             </Router>
         </ThemeProvider>
