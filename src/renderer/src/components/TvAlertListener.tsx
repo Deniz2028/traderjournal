@@ -23,6 +23,10 @@ export const TvAlertListener: React.FC = () => {
                 (payload) => {
                     const newAlert = payload.new as Notification;
                     triggerToast(newAlert);
+
+                    // Trigger Text-to-Speech
+                    speakMessage(`${newAlert.title}. ${newAlert.message}`);
+
                     // Optional: Keep a history of recent alerts
                     setAlerts(prev => [newAlert, ...prev].slice(0, 5));
                 }
@@ -33,6 +37,26 @@ export const TvAlertListener: React.FC = () => {
             supabase.removeChannel(channel);
         };
     }, []);
+
+    const speakMessage = (text: string) => {
+        if (!('speechSynthesis' in window)) return;
+
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        // Try to set Turkish voice if available, otherwise default
+        // utterance.lang = 'tr-TR'; 
+        // Note: Voice selection depends on OS. We'll let it use default/auto detect or can list voices.
+        // For accurate Turkish, we might need to find a 'tr' voice.
+
+        const voices = window.speechSynthesis.getVoices();
+        const trVoice = voices.find(v => v.lang.includes('tr'));
+        if (trVoice) utterance.voice = trVoice;
+
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
+    };
 
     const triggerToast = (alert: Notification) => {
         // Simple custom toast implementation
