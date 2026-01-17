@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import React from 'react';
+
 import { format } from 'date-fns';
 
 interface Analysis {

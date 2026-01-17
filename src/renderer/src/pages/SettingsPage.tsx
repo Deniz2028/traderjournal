@@ -4,6 +4,9 @@ import {
   ALL_INSTRUMENTS,
   getDashboardInstruments,
   saveDashboardInstruments,
+  getAchievementsMode,
+  saveAchievementsMode,
+  type AchievementsMode
 } from "../utils/settingsStorage";
 import { getAppToday, setAppToday, isSimulationMode } from "../utils/appDate";
 import {
@@ -22,6 +25,7 @@ import {
 export const SettingsPage: React.FC = () => {
   const [dashboardSymbols, setDashboardSymbols] = useState<string[]>([]);
   const [mtfSettings, setMtfSettings] = useState<MorningMtfSettings>({});
+  const [achievementsMode, setAchievementsMode] = useState<AchievementsMode>("passed_only");
 
   // For UI state - which instrument we are editing MTF settings for
   const [activeSymbol, setActiveSymbol] = useState<string>("XAUUSD");
@@ -42,6 +46,7 @@ export const SettingsPage: React.FC = () => {
   useEffect(() => {
     setDashboardSymbols(getDashboardInstruments());
     setMtfSettings(loadMorningMtfSettings());
+    setAchievementsMode(getAchievementsMode());
   }, []);
 
   const toggleDashboardSymbol = (symbol: string) => {
@@ -85,6 +90,7 @@ export const SettingsPage: React.FC = () => {
   const handleSave = () => {
     saveDashboardInstruments(dashboardSymbols);
     saveMorningMtfSettings(mtfSettings);
+    saveAchievementsMode(achievementsMode);
     alert("Settings saved!");
   };
 
@@ -225,23 +231,59 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button
-            type="button"
-            onClick={handleSave}
-            style={{
-              backgroundColor: "var(--accent-primary)",
-              color: "#FFFFFF",
-              padding: "8px 24px",
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer",
-              border: "none"
-            }}
-          >
-            Save Settings
-          </button>
+
+
+        {/* Achievements Configuration */}
+        <div style={{ marginTop: 40, borderTop: "1px solid var(--border-subtle)", paddingTop: 20 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Achievements / Prop Firms</h2>
+          <div className="card">
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>View Mode</h3>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
+              Control what is displayed on the Achievements page.
+            </p>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setAchievementsMode("passed_only")}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 8,
+                  border: achievementsMode === "passed_only" ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                  backgroundColor: achievementsMode === "passed_only" ? "var(--bg-active)" : "var(--bg-card)",
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: 14, color: achievementsMode === "passed_only" ? "var(--accent-primary)" : "var(--text-primary)", marginBottom: 4 }}>
+                  Passed Accounts Only
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  Show only Funded accounts and Payouts. Clean view.
+                </div>
+              </button>
+
+              <button
+                onClick={() => setAchievementsMode("all")}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: 8,
+                  border: achievementsMode === "all" ? "1px solid var(--accent-primary)" : "1px solid var(--border-subtle)",
+                  backgroundColor: achievementsMode === "all" ? "var(--bg-active)" : "var(--bg-card)",
+                  cursor: "pointer",
+                  textAlign: "left"
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: 14, color: achievementsMode === "all" ? "var(--accent-primary)" : "var(--text-primary)", marginBottom: 4 }}>
+                  All Accounts (Prop Dashboard)
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+                  Show all accounts including Phase 1 & 2 challenges.
+                </div>
+              </button>
+            </div>
+          </div>
         </div>
 
 
@@ -353,6 +395,25 @@ export const SettingsPage: React.FC = () => {
                 }}
               >
                 {isSimulationMode() ? "Disable Simulation" : "Enable Simulation"}
+              </button>
+            </div>
+
+            <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid var(--border-subtle)", display: "flex", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={handleSave}
+                style={{
+                  backgroundColor: "var(--accent-primary)",
+                  color: "#FFFFFF",
+                  padding: "8px 24px",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  border: "none"
+                }}
+              >
+                Save Settings
               </button>
             </div>
           </div>

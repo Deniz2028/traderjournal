@@ -1,5 +1,5 @@
-// src/renderer/src/utils/achievementsStorage.ts
 import type { Achievement } from "../types/achievements";
+import { migrateAchievements } from "./migrationHelper";
 
 const STORAGE_KEY = "tj_achievements_v1";
 
@@ -8,7 +8,7 @@ function safeParse(raw: string | null): Achievement[] {
     try {
         const parsed = JSON.parse(raw) as Achievement[];
         if (!Array.isArray(parsed)) return [];
-        return parsed;
+        return migrateAchievements(parsed);
     } catch {
         return [];
     }
@@ -28,6 +28,13 @@ export function saveAchievements(list: Achievement[]): void {
 export function addAchievement(item: Achievement): Achievement[] {
     const all = loadAchievements();
     const next = [...all, item];
+    saveAchievements(next);
+    return next;
+}
+
+export function updateAchievement(item: Partial<Achievement> & { id: string }): Achievement[] {
+    const all = loadAchievements();
+    const next = all.map(x => x.id === item.id ? { ...x, ...item } : x);
     saveAchievements(next);
     return next;
 }
@@ -59,15 +66,10 @@ export function getTotals(list: Achievement[]): {
             else if ((a as any).payout) totalPayout += (a as any).payout;
         } else {
             // Account
-            // Only count if ACTIVE (Funded)
-            // If status is undefined (legacy), assume it counts? 
-            // Or maybe we treat legacy items as just "achievements" and count them?
-            // Let's count "Funded" and legacy items with valid sizes.
-
-            // If new status field exists, only count "Funded".
-            if (a.status && a.status !== "Funded") continue;
-
-            if (a.accountSize) totalFunded += a.accountSize;
+            // Only count if Phase is Funded
+            if (a.phase === "Funded" && a.status !== "Failed") {
+                if (a.accountSize) totalFunded += a.accountSize;
+            }
         }
     }
 

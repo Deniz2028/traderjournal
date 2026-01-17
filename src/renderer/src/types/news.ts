@@ -8,3 +8,11 @@ export interface FxNewsItem {
     forecast: string;
     previous: string;
 }
+
+export interface MyFxBookItem {
+    title: string;
+    date: string; // "YYYY-MM-DD HH:mm" usually or parseable string
+    country: string;
+    impact: "Low" | "Medium" | "High" | "Holiday" | string;
+    description: string; // The RSS description usually contains "Vol., Actual, Consensus, Previous"
+}

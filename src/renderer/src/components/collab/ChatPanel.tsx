@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
 import type { MorningMtfInstrumentSnapshot } from '../../../../shared/morningMtfTypes';
+import { db } from '../../lib/firebase';
+import { collection, query, where, orderBy, onSnapshot, addDoc, doc, deleteDoc, getDoc } from 'firebase/firestore';
 
 interface ChatPanelProps {
     analysisId: string;
@@ -13,10 +14,9 @@ interface Message {
     id: string;
     content: string;
     user_id: string;
-    created_at: string;
-    profiles?: {
-        username: string;
-    };
+    created_at: string; // or Timestamp, but we typically use ISO strings in this app
+    username?: string; // Denormalized
+    pending?: boolean;
 }
 
 interface AnalysisCallback {
@@ -27,10 +27,8 @@ interface AnalysisCallback {
     image_url: string;
     created_at: string;
     user_id: string;
-    instrument_data?: MorningMtfInstrumentSnapshot; // New field
-    profiles?: {
-        username: string;
-    };
+    instrument_data?: MorningMtfInstrumentSnapshot;
+    username?: string;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) => {
@@ -39,78 +37,56 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
     const [analysis, setAnalysis] = useState<AnalysisCallback | null>(null);
     const [inputText, setInputText] = useState('');
     const [imageModal, setImageModal] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true); // Added loading state
-
-    // State for multi-tf view
-    const [activeTab, setActiveTab] = useState<string>('');
+    const [isOffline, setIsOffline] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    const fetchMessages = async () => {
-        const { data: msgsData, error } = await supabase
-            .from('chat_messages')
-            .select('*, profiles(username)')
-            .eq('analysis_id', analysisId)
-            .order('created_at', { ascending: true });
-
-        if (!error && msgsData) {
-            setMessages(msgsData as any);
-            setTimeout(scrollToBottom, 100);
-        }
-    };
-
     const fetchAnalysisDetails = async () => {
-        const { data: analysisData } = await supabase
-            .from('shared_analyses')
-            .select('*, profiles(username)')
-            .eq('id', analysisId)
-            .single();
-
-        if (analysisData) setAnalysis(analysisData as any);
+        try {
+            const docRef = doc(db, "shared_analyses", analysisId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setAnalysis(docSnap.data() as AnalysisCallback);
+            }
+        } catch (e) {
+            console.error("Error fetching analysis:", e);
+        }
     };
 
     useEffect(() => {
         if (!analysisId) return;
 
-        setLoading(true);
-        setMessages([]); // Clear messages on analysisId change
-        setAnalysis(null); // Clear analysis on analysisId change
-        fetchMessages();
+        setMessages([]);
+        setAnalysis(null);
         fetchAnalysisDetails();
-        setLoading(false);
 
-        const channel = supabase
-            .channel(`chat:${analysisId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'chat_messages',
-                    filter: `analysis_id=eq.${analysisId}`,
-                },
-                (payload) => {
-                    const newMsg = payload.new as Message;
-                    // Prevent duplicate if optimistic update already added it (check by ID if possible, or simple dedupe)
-                    setMessages((current) => {
-                        if (current.some(m => m.id === newMsg.id)) return current;
-                        return [...current, newMsg];
-                    });
-                    scrollToBottom();
-                }
-            )
-            .subscribe();
+        // Realtime Messages
+        const q = query(
+            collection(db, "chat_messages"),
+            where("analysis_id", "==", analysisId),
+            orderBy("created_at", "asc")
+        );
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        const unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
+            // Check if we are reading from cache (implied offline or syncing)
+            setIsOffline(snapshot.metadata.fromCache);
+
+            const list: Message[] = [];
+            snapshot.forEach(doc => {
+                list.push({
+                    id: doc.id,
+                    ...doc.data(),
+                    pending: doc.metadata.hasPendingWrites
+                } as Message);
+            });
+            setMessages(list);
+            setTimeout(scrollToBottom, 50);
+        }, (error) => {
+            console.error("SNAPSHOT ERROR:", error);
+            alert("Connection Error: " + error.message);
+        });
+
+        return () => unsubscribe();
     }, [analysisId]);
-
-    // When analysis loads, set default tab
-    useEffect(() => {
-        if (analysis?.instrument_data?.timeframes?.length) {
-            setActiveTab(analysis.instrument_data.timeframes[0].tf);
-        }
-    }, [analysis]);
 
     // Lightbox Keyboard Navigation
     useEffect(() => {
@@ -166,46 +142,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
         const content = inputText.trim();
         setInputText('');
 
-        // Optimistic update
-        const tempId = crypto.randomUUID();
-        const optimisticMsg: Message = {
-            id: tempId,
-            content,
-            user_id: user.id,
-            created_at: new Date().toISOString(),
-            profiles: { username: 'You' }
-        };
-
-        setMessages(prev => [...prev, optimisticMsg]);
-        setTimeout(scrollToBottom, 50);
-
-        const { error } = await supabase.from('chat_messages').insert({
-            analysis_id: analysisId,
-            user_id: user.id,
-            content,
-        });
-
-        if (error) {
+        try {
+            await addDoc(collection(db, "chat_messages"), {
+                analysis_id: analysisId,
+                user_id: user.uid,
+                content,
+                created_at: new Date().toISOString(),
+                username: user.displayName || 'User'
+            });
+        } catch (error: any) {
             alert('Failed to send: ' + error.message);
-            setMessages(prev => prev.filter(m => m.id !== tempId));
         }
     };
 
     const handleDelete = async () => {
         if (!confirm('Are you sure you want to delete this analysis?')) return;
 
-        // Select count to verify deletion
-        const { error, count } = await supabase
-            .from('shared_analyses')
-            .delete({ count: 'exact' })
-            .eq('id', analysisId);
-
-        if (error) {
+        try {
+            await deleteDoc(doc(db, "shared_analyses", analysisId));
+            onDelete?.();
+        } catch (error: any) {
             alert('Error deleting: ' + error.message);
-        } else if (count === 0) {
-            alert('Could not delete. You might not be the owner or permissions are missing.');
-        } else {
-            onDelete?.(); // Only clear from UI if DB delete was successful
         }
     };
 
@@ -223,21 +180,40 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
         if (analysis.instrument_data) {
             const inst = analysis.instrument_data;
 
-            // Determine overall bias (e.g. from highest TF or just show first)
-            // Or just display pair name plainly
-
             return (
                 <div style={styles.contextCard}>
                     <div style={styles.contextHeader}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={styles.pair}>{inst.symbol}</span>
+                            {isOffline && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ fontSize: 10, backgroundColor: '#FEE2E2', color: '#DC2626', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }} title="Viewing cached data. Trying to sync...">
+                                        OFFLINE
+                                    </span>
+                                    <button
+                                        onClick={() => window.location.reload()}
+                                        style={{
+                                            fontSize: 10, padding: '2px 6px', borderRadius: 4,
+                                            border: '1px solid var(--border-subtle)', background: 'var(--bg-card)',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        ↻ Retry
+                                    </button>
+                                </div>
+                            )}
+                            {!isOffline && (
+                                <span style={{ fontSize: 10, backgroundColor: '#D1FAE5', color: '#059669', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }} title="Connected to War Room">
+                                    LIVE
+                                </span>
+                            )}
                             {/* Overall Date/Author */}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <div style={styles.author}>
-                                Shared by {analysis.profiles?.username || 'Unknown'} at {format(new Date(analysis.created_at), 'HH:mm')}
+                                Shared by {analysis.username || 'Unknown'} at {format(new Date(analysis.created_at), 'HH:mm')}
                             </div>
-                            {user?.id === analysis.user_id && (
+                            {user?.uid === analysis.user_id && (
                                 <button onClick={handleDelete} style={styles.deleteBtn} title="Delete">🗑️</button>
                             )}
                         </div>
@@ -271,6 +247,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
                                     <div style={{ position: 'relative', cursor: 'zoom-in' }} onClick={() => setImageModal(tf.chartUrl)}>
                                         <img
                                             src={tf.chartUrl}
+                                            loading="lazy"
+                                            decoding="async"
                                             alt={`${tf.tf} Chart`}
                                             style={{ width: '100%', borderRadius: 6, display: 'block' }}
                                         />
@@ -327,9 +305,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <div style={styles.author}>
-                            Shared by {analysis.profiles?.username || 'Unknown'} at {format(new Date(analysis.created_at), 'HH:mm')}
+                            Shared by {analysis.username || 'Unknown'} at {format(new Date(analysis.created_at), 'HH:mm')}
                         </div>
-                        {user?.id === analysis.user_id && (
+                        {user?.uid === analysis.user_id && (
                             <button onClick={handleDelete} style={styles.deleteBtn} title="Delete">🗑️</button>
                         )}
                     </div>
@@ -361,7 +339,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
                     <div style={styles.empty}>No messages yet. Start the discussion!</div>
                 )}
                 {messages.map((msg) => {
-                    const isMe = msg.user_id === user?.id;
+                    const isMe = msg.user_id === user?.uid;
                     return (
                         <div
                             key={msg.id}
@@ -374,14 +352,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ analysisId, onDelete }) =>
                                 ...styles.bubble,
                                 backgroundColor: isMe ? 'var(--accent-primary)' : '#F3F4F6',
                                 color: isMe ? 'white' : 'black',
+                                opacity: msg.pending ? 0.7 : 1,
                             }}>
-                                {!isMe && <div style={styles.sender}>{msg.profiles?.username || 'User'}</div>}
+                                {!isMe && <div style={styles.sender}>{msg.username || 'User'}</div>}
                                 <div style={styles.content}>{msg.content}</div>
                                 <div style={{
                                     ...styles.time,
-                                    color: isMe ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.4)'
+                                    color: isMe ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.4)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4
                                 }}>
                                     {format(new Date(msg.created_at), 'HH:mm')}
+                                    {isMe && (
+                                        <span style={{ fontSize: 10 }}>
+                                            {msg.pending ? '🕒' : '✓'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

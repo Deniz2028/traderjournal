@@ -1,3 +1,4 @@
+// Main Process - Trigger Restart 2
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -19,6 +20,10 @@ import type { MorningMtfDaySnapshot } from "../shared/morningMtfTypes";
 import { eodStorage } from "./eodReviewStore";
 import { runMt5Summary } from "./mt5Process";
 import { exportAllData, importAllData } from "./backupManager";
+import {
+    loadBacktests, addBacktest, deleteBacktest, updateBacktest,
+    loadSessions, addSession, deleteSession
+} from "./backtestRepo";
 
 function createWindow(): void {
     // Create the browser window.
@@ -57,6 +62,10 @@ function createWindow(): void {
 app.whenReady().then(() => {
     // Set app user model id for windows
     electronApp.setAppUserModelId('com.electron')
+
+    // IGNORING SSL ERRORS (Fix for Antivirus/Firewall SSL Scanning)
+    app.commandLine.appendSwitch('ignore-certificate-errors');
+    app.commandLine.appendSwitch('allow-insecure-localhost', 'true');
 
     // Default open or close DevTools by F12 in development
     // and ignore CommandOrControl + R in production.
@@ -120,6 +129,40 @@ app.whenReady().then(() => {
 
     ipcMain.handle("eod:getForMonth", (_, yyyyMM) => {
         return eodStorage.getForMonth(yyyyMM);
+    });
+
+    // --- Backtest Mode Handlers ---
+    // imported at top level
+
+    ipcMain.handle("backtest:getAll", () => {
+        return loadBacktests();
+    });
+
+    ipcMain.handle("backtest:add", (_event, trade) => {
+        return addBacktest(trade);
+    });
+
+    ipcMain.handle("backtest:update", (_event, trade) => {
+        return updateBacktest(trade);
+    });
+
+    ipcMain.handle("backtest:delete", (_event, id) => {
+        deleteBacktest(id);
+        return { ok: true };
+    });
+
+    // Sessions
+    ipcMain.handle("backtest:getSessions", () => {
+        return loadSessions();
+    });
+
+    ipcMain.handle("backtest:createSession", (_event, session) => {
+        return addSession(session);
+    });
+
+    ipcMain.handle("backtest:deleteSession", (_event, id) => {
+        deleteSession(id);
+        return { ok: true };
     });
 
     // --- News API ---
@@ -190,6 +233,77 @@ app.whenReady().then(() => {
         }
     });
 
+    // MyFxBook Cache
+    let cachedMyFxBookData: any = null;
+    let lastMyFxBookFetchTime: number = 0;
+
+    ipcMain.handle("news:getMyFxBook", async () => {
+        try {
+            // Cache check (1 hour)
+            if (cachedMyFxBookData && (Date.now() - lastMyFxBookFetchTime < CACHE_DURATION)) {
+                return cachedMyFxBookData;
+            }
+
+            return new Promise((resolve, _reject) => {
+                const { net } = require("electron");
+                const request = net.request("https://www.myfxbook.com/rss/forex-economic-calendar-events");
+                request.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+                request.on("response", (response) => {
+                    let data = "";
+                    response.on("data", (chunk) => {
+                        data += chunk;
+                    });
+                    response.on("end", () => {
+                        if (response.statusCode >= 200 && response.statusCode < 300) {
+                            try {
+                                const parsed: any[] = [];
+                                // Simple Regex Parse for RSS items
+                                // <item> ... </item>
+                                const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+                                let match;
+                                while ((match = itemRegex.exec(data)) !== null) {
+                                    const content = match[1];
+                                    const titleMatch = /<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/.exec(content);
+                                    const descMatch = /<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/.exec(content);
+                                    const dateMatch = /<pubDate>(.*?)<\/pubDate>/.exec(content);
+
+                                    if (titleMatch && descMatch) {
+                                        const fullTitle = titleMatch[1];
+                                        const description = descMatch[1];
+
+                                        parsed.push({
+                                            title: fullTitle,
+                                            description: description, // Contains the HTML table
+                                            date: dateMatch ? dateMatch[1] : "", // pubDate
+                                            country: "", // Will extract in frontend
+                                            impact: "Medium" // Placeholder
+                                        });
+                                    }
+                                }
+
+                                cachedMyFxBookData = parsed;
+                                lastMyFxBookFetchTime = Date.now();
+                                resolve(parsed);
+                            } catch (e) {
+                                resolve([]); // Fail safe
+                            }
+                        } else {
+                            resolve([]);
+                        }
+                    });
+                });
+                request.on("error", () => {
+                    resolve([]);
+                });
+                request.end();
+            });
+        } catch (error) {
+            console.error("MyFxBook fetch error:", error);
+            return [];
+        }
+    });
+
     // MT5 Analysis
     ipcMain.handle("mt5:getSummary", async (_event, params) => {
         // params: { dateFrom, dateTo }
@@ -205,62 +319,7 @@ app.whenReady().then(() => {
         return await importAllData();
     });
 
-    // --- Custom Auth Storage (File Based) ---
-    // This solves the issue where localStorage is wiped or not persisted reliable
-    const authStorePath = join(app.getPath('userData'), 'supabase-auth-store.json');
 
-    ipcMain.handle('auth:setItem', async (_, { key, value }) => {
-        try {
-            let store: Record<string, string> = {};
-            if (fs.existsSync(authStorePath)) {
-                try {
-                    const content = fs.readFileSync(authStorePath, 'utf-8');
-                    if (content.trim()) {
-                        store = JSON.parse(content);
-                    }
-                } catch (e) {
-                    console.error("Failed to parse auth store, resetting:", e);
-                    store = {};
-                }
-            }
-            store[key] = value;
-            fs.writeFileSync(authStorePath, JSON.stringify(store, null, 2));
-        } catch (e) {
-            console.error('Auth Store Write Error:', e);
-        }
-    });
-
-    ipcMain.handle('auth:getItem', async (_, key) => {
-        try {
-            if (fs.existsSync(authStorePath)) {
-                try {
-                    const content = fs.readFileSync(authStorePath, 'utf-8');
-                    if (!content.trim()) return null;
-                    const store = JSON.parse(content);
-                    return store[key] || null;
-                } catch (e) {
-                    console.error("Failed to parse auth store on read:", e);
-                    return null;
-                }
-            }
-            return null;
-        } catch (e) {
-            console.error('Auth Store Read Error:', e);
-            return null;
-        }
-    });
-
-    ipcMain.handle('auth:removeItem', async (_, key) => {
-        try {
-            if (fs.existsSync(authStorePath)) {
-                const store = JSON.parse(fs.readFileSync(authStorePath, 'utf-8'));
-                delete store[key];
-                fs.writeFileSync(authStorePath, JSON.stringify(store));
-            }
-        } catch (e) {
-            console.error('Auth Store Delete Error:', e);
-        }
-    });
 
     createWindow()
 

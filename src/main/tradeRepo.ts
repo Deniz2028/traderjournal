@@ -3,7 +3,7 @@ import { app } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 
-export type Direction = "Long" | "Short";
+export type Direction = "Long" | "Short" | "Neutral";
 export type ReviewStatus = "Reviewed" | "Pending";
 
 export interface Trade {
@@ -36,7 +36,9 @@ export function loadTrades(): Trade[] {
     try {
         ensureDataDir();
         const filePath = getTradesFilePath();
+        console.log("REPO DEBUG: Loading trades from:", filePath);
         if (!fs.existsSync(filePath)) {
+            console.log("REPO DEBUG: File does not exist:", filePath);
             return [];
         }
         const raw = fs.readFileSync(filePath, "utf-8");

@@ -1,5 +1,5 @@
 // src/renderer/src/pages/AdvancedAnalysisPage.tsx
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import type {
     Mt5SummaryResponse,
     Mt5Summary,
@@ -45,10 +45,10 @@ export const AdvancedAnalysisPage: React.FC = () => {
     const [result, setResult] = useState<Mt5SummaryResponse | null>(null);
     const [coaching, setCoaching] = useState<ReturnType<typeof generateCoachingAdvice> | null>(null);
 
-    useEffect(() => {
-        handleFetch();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    // useEffect(() => {
+    //     handleFetch();
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, []);
 
     const handleFetch = async () => {
         // Debug logging
@@ -137,11 +137,15 @@ export const AdvancedAnalysisPage: React.FC = () => {
                 <div style={{ marginLeft: "auto" }}>
                     <button
                         type="button"
-                        onClick={handleFetch}
+                        onClick={() => {
+                            if (confirm("MT5 terminali açılacak ve veriler çekilecektir. Devam etmek istiyor musunuz?")) {
+                                handleFetch();
+                            }
+                        }}
                         style={styles.fetchBtn}
                         disabled={loading}
                     >
-                        {loading ? "Fetching..." : "Fetch from MT5"}
+                        {loading ? "Yükleniyor..." : "Verileri Çek"}
                     </button>
                 </div>
             </div>

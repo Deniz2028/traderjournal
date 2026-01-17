@@ -74,19 +74,38 @@ function getUserDataPath() {
     return app.getPath("userData");
 }
 
+import { loadTrades as loadRepoTrades } from "./tradeRepo";
+
 function loadRawTrades(): RawTrade[] {
-    const file = path.join(getUserDataPath(), "trades.json");
-    return readJsonSafe<RawTrade[]>(file, []);
+    // Use the single source of truth from tradeRepo
+    console.log("DASHBOARD: Loading trades via tradeRepo...");
+    return loadRepoTrades().map(t => ({
+        ...t,
+        id: t.id,
+        date: t.date,
+        symbol: t.symbol,
+        resultR: t.resultR,
+        outcome: (t as any).outcome // cast if needed
+    }));
 }
 
 function loadRawMorning(): RawMorning[] {
     const file = path.join(getUserDataPath(), "morning_mtf.json");
-    return readJsonSafe<RawMorning[]>(file, []);
+    // Handle both Array and Record formats for robustness
+    const content = readJsonSafe<any>(file, []);
+    if (Array.isArray(content)) {
+        return content;
+    } else if (typeof content === "object" && content !== null) {
+        return Object.values(content);
+    }
+    return [];
 }
 
 function loadRawEod(): RawEod[] {
-    const file = path.join(getUserDataPath(), "eod_reviews.json");
-    return readJsonSafe<RawEod[]>(file, []);
+    // eodReviewStore.ts saves to eod_review.json (singular) as a Record<string, EODReview>
+    const file = path.join(getUserDataPath(), "eod_review.json");
+    const record = readJsonSafe<Record<string, RawEod>>(file, {});
+    return Object.values(record);
 }
 
 function getWeekRangeToday(): { start: Date; end: Date } {
@@ -119,12 +138,21 @@ function buildDashboardSummary(): DashboardSummaryPayload {
         const morning = loadRawMorning();
         const eods = loadRawEod();
 
+        console.log("DASHBOARD DEBUG: userData path:", getUserDataPath());
+        console.log("DASHBOARD DEBUG: Trades path:", path.join(getUserDataPath(), "trade-journal-data", "trades.json"));
+        console.log("DASHBOARD DEBUG: Trades loaded:", trades.length);
+        if (trades.length > 0) {
+            console.log("DASHBOARD DEBUG: First trade:", JSON.stringify(trades[0]));
+        }
+
         // DUMMY DATA FALLBACK: Show if very little data exists (< 2 trades) so it doesn't look empty
         if (trades.length < 2) {
+            console.log("DASHBOARD DEBUG: Not enough trades, returning dummy data.");
             return generateDummyDashboard();
         }
 
         const { start, end } = getWeekRangeToday();
+        console.log("DASHBOARD DEBUG: Week range:", start, end);
 
         // ... (rest of logic) ...
         // Since I cannot easily wrap the *rest* of the function without replacing it all, 

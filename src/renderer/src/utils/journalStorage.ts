@@ -39,7 +39,7 @@ interface RawStore {
     [dateISO: string]: MtfTrade[];
 }
 
-function loadStore(): RawStore {
+export function loadStore(): RawStore {
     if (typeof window === "undefined") return {};
     try {
         const raw = window.localStorage.getItem(STORAGE_KEY);

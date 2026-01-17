@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 
 export const AuthPage: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -15,34 +16,20 @@ export const AuthPage: React.FC = () => {
 
         try {
             if (mode === 'signup') {
-                const { error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                });
-                if (error) throw error;
-                alert('Check your email for the confirmation link!');
+                await createUserWithEmailAndPassword(auth, email, password);
+                alert('Account created! You are now logged in.');
             } else {
-                const { error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
+                await signInWithEmailAndPassword(auth, email, password);
             }
         } catch (err: any) {
+            console.error(err);
             setError(err.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const [debugToken, setDebugToken] = useState<string | null>(null);
 
-    React.useEffect(() => {
-        // Check file storage for debug
-        window.api.auth.getItem('supabase.auth.token').then(token => {
-            setDebugToken(token ? 'YES (Present)' : 'NO (Missing)');
-        });
-    }, [loading]);
 
     return (
         <div style={styles.container}>

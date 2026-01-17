@@ -22,8 +22,11 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@electron-toolkit/utils": "^3.0.0",
     "@supabase/supabase-js": "^2.88.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
     "electron-updater": "^6.1.7",
+    "firebase": "^10.13.0",
     "lucide-react": "^0.559.0",
     "recharts": "^3.5.1",
     "wouter": "^3.8.1"

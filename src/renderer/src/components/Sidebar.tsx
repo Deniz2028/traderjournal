@@ -6,9 +6,22 @@ import { Link, useLocation } from "wouter";
 import { useNewsMonitor } from "../hooks/useNewsMonitor";
 import { useTheme } from "../context/ThemeContext";
 
+import { getAchievementsMode } from "../utils/settingsStorage";
+
 export const Sidebar: React.FC = () => {
     const [location] = useLocation();
     const { theme, toggleTheme } = useTheme();
+    const [achievementsTitle, setAchievementsTitle] = React.useState("Achievements");
+
+    React.useEffect(() => {
+        const updateTitle = () => {
+            const mode = getAchievementsMode();
+            setAchievementsTitle(mode === "all" ? "Prop Firms" : "Achievements");
+        };
+        updateTitle();
+        window.addEventListener("achievements-mode-changed", updateTitle);
+        return () => window.removeEventListener("achievements-mode-changed", updateTitle);
+    }, []);
 
     // Helper to determine if active
     const isActive = (path: string) => {
@@ -111,6 +124,7 @@ export const Sidebar: React.FC = () => {
                     <Link href="/calendar" style={{ ...styles.navItem, ...(isActive("/calendar") ? styles.navItemActive : {}) }}>
                         Calendar
                     </Link>
+
                     <Link href="/advanced" style={{ ...styles.navItem, ...(isActive("/advanced") ? styles.navItemActive : {}) }}>
                         Advanced
                     </Link>
@@ -134,11 +148,14 @@ export const Sidebar: React.FC = () => {
 
                 {/* Bottom Menu Group (Rules & Achievements) */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 4, padding: "0 12px 12px 12px" }}>
+                    <Link href="/backtest" style={{ ...styles.navItem, ...(isActive("/backtest") ? styles.navItemActive : {}) }}>
+                        Backtest
+                    </Link>
                     <Link href="/rules" style={{ ...styles.navItem, ...(isActive("/rules") ? styles.navItemActive : {}) }}>
                         Rules
                     </Link>
                     <Link href="/achievements" style={{ ...styles.navItem, ...(isActive("/achievements") ? styles.navItemActive : {}) }}>
-                        Achievements
+                        {achievementsTitle}
                     </Link>
                 </div>
 

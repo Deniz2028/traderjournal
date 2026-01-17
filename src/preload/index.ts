@@ -64,6 +64,16 @@ const api = {
     dashboard: {
         getSummary: () => ipcRenderer.invoke("dashboard:getSummary"),
     },
+    backtest: {
+        getAll: () => ipcRenderer.invoke("backtest:getAll"),
+        add: (trade: any) => ipcRenderer.invoke("backtest:add", trade),
+        update: (trade: any) => ipcRenderer.invoke("backtest:update", trade),
+        delete: (id: string) => ipcRenderer.invoke("backtest:delete", id),
+
+        getSessions: () => ipcRenderer.invoke("backtest:getSessions"),
+        createSession: (session: any) => ipcRenderer.invoke("backtest:createSession", session),
+        deleteSession: (id: string) => ipcRenderer.invoke("backtest:deleteSession", id),
+    },
     mt5Api: {
         getSummary: (params?: { dateFrom?: string; dateTo?: string }) => {
             return ipcRenderer.invoke("mt5:getSummary", params ?? {});

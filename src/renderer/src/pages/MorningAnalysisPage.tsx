@@ -2,7 +2,8 @@
 // src/renderer/src/pages/MorningAnalysisPage.tsx
 import React, { useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { supabase } from "../lib/supabase";
+import { db } from "../lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 import {
@@ -194,22 +195,26 @@ const MorningAnalysisPage: React.FC = () => {
 
         const notes = activeState.notes || `Daily Bias: ${inst.dailyBias}`;
 
-        const { error } = await supabase.from('shared_analyses').insert({
-            user_id: user.id,
+        // Fire and forget (Optimistic update)
+        addDoc(collection(db, 'shared_analyses'), {
+            user_id: user.uid,
+            username: user.displayName || "Unknown",
             pair: inst.symbol || "Unknown",
             timeframe: activeTf,
             bias: activeState.bias === "neutral" ? (inst.dailyBias === "neutral" ? "Neutral" : biasLabel[inst.dailyBias]) : biasLabel[activeState.bias],
             notes: notes,
             image_url: activeState.chartUrl, // We trust this is a valid URL or null
             instrument_data: inst, // Send full snapshot
-            likes: 0
+            likes: 0,
+            created_at: new Date().toISOString()
+        }).then(() => {
+            // Success (server ack), usually silent or small toast
+            console.log("Analysis synced to server.");
+        }).catch((error) => {
+            alert("Failed to share (background): " + error.message);
         });
 
-        if (error) {
-            alert("Failed to share: " + error.message);
-        } else {
-            alert("Shared to War Room! ⚔️");
-        }
+        alert("Shared to War Room! ⚔️");
     };
 
     return (
@@ -421,7 +426,7 @@ const MorningAnalysisPage: React.FC = () => {
                                     {/* Read Only View */}
                                     {active.chartUrl ? (
                                         <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #E5E7EB", cursor: "zoom-in" }} onClick={() => setLightboxImage(active.chartUrl)}>
-                                            <img src={active.chartUrl} alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
+                                            <img src={active.chartUrl} loading="lazy" decoding="async" alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
                                         </div>
                                     ) : (
                                         <div style={{ padding: 32, textAlign: 'center', backgroundColor: 'var(--bg-secondary)', borderRadius: 12, color: 'var(--text-tertiary)', fontSize: 13 }}>
@@ -448,7 +453,7 @@ const MorningAnalysisPage: React.FC = () => {
 
                                     {active.chartUrl && (
                                         <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #E5E7EB", cursor: "zoom-in" }} onClick={() => setLightboxImage(active.chartUrl)}>
-                                            <img src={active.chartUrl} alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 400, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
+                                            <img src={active.chartUrl} loading="lazy" decoding="async" alt={`${inst.symbol} ${active.tf} chart`} style={{ width: "100%", maxHeight: 400, objectFit: "contain", display: "block", backgroundColor: "var(--bg-page)" }} />
                                         </div>
                                     )}
 

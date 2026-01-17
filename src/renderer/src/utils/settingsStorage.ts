@@ -110,3 +110,26 @@ export function getTimeframesForSymbol(symbol: string): Timeframe[] {
     // Filter out invalid entries, keep only known tfs
     return frames.filter((tf) => AVAILABLE_TIMEFRAMES.includes(tf));
 }
+
+// ---- Achievements View Mode ----
+
+const ACHIEVEMENTS_MODE_KEY = "tj_achievements_mode_v1";
+
+export type AchievementsMode = "passed_only" | "all";
+
+export function getAchievementsMode(): AchievementsMode {
+    if (typeof window === "undefined") return "passed_only";
+    try {
+        const raw = window.localStorage.getItem(ACHIEVEMENTS_MODE_KEY);
+        if (raw === "all") return "all";
+        return "passed_only"; // Default
+    } catch {
+        return "passed_only";
+    }
+}
+
+export function saveAchievementsMode(mode: AchievementsMode) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ACHIEVEMENTS_MODE_KEY, mode);
+    window.dispatchEvent(new Event("achievements-mode-changed"));
+}

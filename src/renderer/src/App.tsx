@@ -16,6 +16,8 @@ import { AdvancedAnalysisPage } from "./pages/AdvancedAnalysisPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { EodReviewPage as EODReviewPage } from "./pages/EODReviewPage";
 import { CollabPage } from "./pages/CollabPage";
+import { BacktestPage } from "./pages/BacktestPage";
+import { BacktestSessionPage } from "./pages/BacktestSessionPage";
 import { NewsPanel } from "./components/NewsPanel";
 import { TvAlertListener } from "./components/TvAlertListener";
 
@@ -30,6 +32,8 @@ export const App: React.FC = () => {
                             <Route path="/" component={DashboardPage} />
                             <Route path="/dashboard" component={DashboardPage} />
                             <Route path="/analytics" component={AnalyticsPage} />
+                            <Route path="/backtest" component={BacktestPage} />
+                            <Route path="/backtest/:id" component={BacktestSessionPage} />
                             <Route path="/advanced" component={AdvancedAnalysisPage} />
                             <Route path="/rules" component={RulesPage} />
                             <Route path="/achievements" component={AchievementsPage} />
@@ -40,6 +44,9 @@ export const App: React.FC = () => {
 
                             <Route path="/today" component={TodayPage} />
                             <Route path="/calendar" component={CalendarPage} />
+                            <Route path="/today" component={TodayPage} />
+                            <Route path="/calendar" component={CalendarPage} />
+                            <Route path="/backtest" component={BacktestPage} />
                             <Route path="/eod/:date" component={EODReviewPage} />
                             <Route path="/collab" component={CollabPage} />
                             <Route path="/settings" component={SettingsPage} />

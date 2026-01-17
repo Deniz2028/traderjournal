@@ -11,6 +11,7 @@ import {
     ReferenceLine,
     Cell
 } from "recharts";
+import { loadStore, MtfTrade } from "../utils/journalStorage";
 
 
 type BiasStatus = "hit" | "miss" | "neutral" | "no-data";
@@ -62,6 +63,41 @@ export const DashboardPage: React.FC = () => {
                     setLoading(false);
                     return;
                 }
+
+                // --- MIGRATION LOGIC START ---
+                try {
+                    // Check if backend is empty and migration is needed
+                    const tradesApi = (window.api as any).trades;
+                    if (tradesApi && tradesApi.getAll && tradesApi.add) {
+                        const existing = await tradesApi.getAll();
+                        if (Array.isArray(existing) && existing.length === 0) {
+                            const store = loadStore();
+                            const allLegacy = Object.values(store).flat() as MtfTrade[];
+
+                            if (allLegacy.length > 0) {
+                                console.log("Migrating legacy trades to backend...", allLegacy.length);
+                                for (const t of allLegacy) {
+                                    const newTrade = {
+                                        id: t.id,
+                                        date: t.dateISO,
+                                        symbol: t.symbol,
+                                        dir: t.tradeBias,
+                                        resultR: t.resultR || 0,
+                                        time: "12:00",
+                                        status: "Reviewed",
+                                        outcome: t.outcome
+                                    };
+                                    await tradesApi.add(newTrade);
+                                }
+                                console.log("Migration complete.");
+                            }
+                        }
+                    }
+                } catch (migErr) {
+                    console.error("Migration failed:", migErr);
+                }
+                // --- MIGRATION LOGIC END ---
+
                 const result = await window.api.dashboard.getSummary();
                 if (!cancelled) {
                     setData(result);
@@ -166,21 +202,52 @@ export const DashboardPage: React.FC = () => {
                     {/* Weekly bar row */}
                     <div style={{ marginTop: 24 }}>
                         <h3 style={styles.sectionTitle}>Week by day</h3>
-                        <div className="card" style={{ marginBottom: 16, height: 200, padding: "16px 24px" }}>
+                        <div className="card" style={{ marginBottom: 16, height: 260, padding: "20px 24px" }}>
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data.days}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="label" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                                    <Tooltip
-                                        cursor={{ fill: 'transparent' }}
-                                        contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        formatter={(value: number) => [value.toFixed(2) + " R", "PnL"]}
+                                <BarChart data={data.days} barSize={32}>
+                                    <defs>
+                                        <linearGradient id="colorGreen" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#22C55E" stopOpacity={0.8} />
+                                            <stop offset="95%" stopColor="#22C55E" stopOpacity={0.3} />
+                                        </linearGradient>
+                                        <linearGradient id="colorRed" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
+                                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0.3} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.5} />
+                                    <XAxis
+                                        dataKey="label"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        dy={10}
+                                        tick={{ fill: "#6B7280" }}
                                     />
-                                    <ReferenceLine y={0} stroke="#9CA3AF" />
-                                    <Bar dataKey="totalR" radius={[4, 4, 0, 0]}>
+                                    <YAxis
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(val) => `${val}R`}
+                                        tick={{ fill: "#6B7280" }}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(0,0,0,0.03)' }}
+                                        contentStyle={{
+                                            borderRadius: 12,
+                                            border: 'none',
+                                            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                            padding: "8px 12px"
+                                        }}
+                                        formatter={(value: number) => [<span style={{ fontWeight: 600 }}>{value.toFixed(2)} R</span>, "PnL"]}
+                                    />
+                                    <ReferenceLine y={0} stroke="#9CA3AF" strokeWidth={1} />
+                                    <Bar dataKey="totalR" radius={[6, 6, 0, 0]} animationDuration={1000}>
                                         {data.days.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.totalR >= 0 ? "#22C55E" : "#EF4444"} />
+                                            <Cell
+                                                key={`cell-${index}`}
+                                                fill={entry.totalR >= 0 ? "url(#colorGreen)" : "url(#colorRed)"}
+                                            />
                                         ))}
                                     </Bar>
                                 </BarChart>

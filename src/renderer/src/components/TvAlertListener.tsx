@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { useEffect, useState, useRef } from 'react';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 interface Notification {
     id: string;
@@ -11,30 +12,41 @@ interface Notification {
 }
 
 export const TvAlertListener: React.FC = () => {
-    const [_alerts, setAlerts] = useState<Notification[]>([]);
+    // We use a ref to track processed IDs to avoid duplicates on re-mounts or strict mode
+    const processedIds = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         // Subscribe to new notifications (global broadcast)
-        const channel = supabase
-            .channel('public:notifications')
-            .on(
-                'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'notifications' },
-                (payload) => {
-                    const newAlert = payload.new as Notification;
-                    triggerToast(newAlert);
+        // Listen to the very last one
+        const q = query(
+            collection(db, "notifications"),
+            orderBy("created_at", "desc"),
+            limit(1)
+        );
 
-                    // Trigger Text-to-Speech
-                    speakMessage(`${newAlert.title}. ${newAlert.message}`);
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added") {
+                    const data = change.doc.data();
+                    const newAlert = { id: change.doc.id, ...data } as Notification;
 
-                    // Optional: Keep a history of recent alerts
-                    setAlerts(prev => [newAlert, ...prev].slice(0, 5));
+                    // Simple dedupe for session
+                    if (processedIds.current.has(newAlert.id)) return;
+                    processedIds.current.add(newAlert.id);
+
+                    // Check if it's recent (optional, but good practice)
+                    const isRecent = new Date().getTime() - new Date(newAlert.created_at).getTime() < 60000; // 1 min
+                    if (isRecent) {
+                        triggerToast(newAlert);
+                        // Trigger Text-to-Speech
+                        speakMessage(`${newAlert.title}. ${newAlert.message}`);
+                    }
                 }
-            )
-            .subscribe();
+            });
+        });
 
         return () => {
-            supabase.removeChannel(channel);
+            unsubscribe();
         };
     }, []);
 
@@ -45,10 +57,6 @@ export const TvAlertListener: React.FC = () => {
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
-        // Try to set Turkish voice if available, otherwise default
-        // utterance.lang = 'tr-TR'; 
-        // Note: Voice selection depends on OS. We'll let it use default/auto detect or can list voices.
-        // For accurate Turkish, we might need to find a 'tr' voice.
 
         const voices = window.speechSynthesis.getVoices();
         const trVoice = voices.find(v => v.lang.includes('tr'));
@@ -100,16 +108,8 @@ export const TvAlertListener: React.FC = () => {
         }
     };
 
-    // Request notification permission on mount
-    useEffect(() => {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
-            Notification.requestPermission();
-        }
-    }, []);
-
     return (
         // Invisible container for logic, actual toasts rendered into #toast-container
-        // We can also create the container here if it doesn't exist
         <div style={{ display: 'none' }} />
     );
 };
