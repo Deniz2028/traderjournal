@@ -133,3 +133,33 @@ export function saveAchievementsMode(mode: AchievementsMode) {
     window.localStorage.setItem(ACHIEVEMENTS_MODE_KEY, mode);
     window.dispatchEvent(new Event("achievements-mode-changed"));
 }
+
+// ---- Alert Settings ----
+
+const ALERT_SETTINGS_KEY = "tj_alert_settings_v1";
+
+export interface AlertSettings {
+    enabled: boolean;
+    ttsEnabled: boolean;
+}
+
+const DEFAULT_ALERT_SETTINGS: AlertSettings = {
+    enabled: true,
+    ttsEnabled: true,
+};
+
+export function getAlertSettings(): AlertSettings {
+    if (typeof window === "undefined") return DEFAULT_ALERT_SETTINGS;
+    try {
+        const raw = window.localStorage.getItem(ALERT_SETTINGS_KEY);
+        if (!raw) return DEFAULT_ALERT_SETTINGS;
+        return JSON.parse(raw) as AlertSettings;
+    } catch {
+        return DEFAULT_ALERT_SETTINGS;
+    }
+}
+
+export function saveAlertSettings(settings: AlertSettings) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(ALERT_SETTINGS_KEY, JSON.stringify(settings));
+}

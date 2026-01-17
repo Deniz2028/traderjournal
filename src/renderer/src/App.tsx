@@ -15,11 +15,9 @@ import { RulesPage } from "./pages/RulesPage";
 import { AdvancedAnalysisPage } from "./pages/AdvancedAnalysisPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { EodReviewPage as EODReviewPage } from "./pages/EODReviewPage";
-import { CollabPage } from "./pages/CollabPage";
 import { BacktestPage } from "./pages/BacktestPage";
 import { BacktestSessionPage } from "./pages/BacktestSessionPage";
 import { NewsPanel } from "./components/NewsPanel";
-import { TvAlertListener } from "./components/TvAlertListener";
 
 export const App: React.FC = () => {
     return (
@@ -48,7 +46,7 @@ export const App: React.FC = () => {
                             <Route path="/calendar" component={CalendarPage} />
                             <Route path="/backtest" component={BacktestPage} />
                             <Route path="/eod/:date" component={EODReviewPage} />
-                            <Route path="/collab" component={CollabPage} />
+
                             <Route path="/settings" component={SettingsPage} />
 
                             {/* News route if want to view full page, though we have panel now */}
@@ -65,8 +63,7 @@ export const App: React.FC = () => {
                         </Switch>
                     </main>
 
-                    {/* Global Components */}
-                    <TvAlertListener />
+
                 </div>
             </Router>
         </ThemeProvider>

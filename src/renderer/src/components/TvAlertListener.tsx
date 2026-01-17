@@ -1,6 +1,12 @@
+<<<<<<< HEAD
 import React, { useEffect, useState, useRef } from 'react';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+=======
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { getAlertSettings } from '../utils/settingsStorage';
+>>>>>>> de01a355d705382517a3ff85f5867085619f0cca
 
 interface Notification {
     id: string;
@@ -17,6 +23,7 @@ export const TvAlertListener: React.FC = () => {
 
     useEffect(() => {
         // Subscribe to new notifications (global broadcast)
+<<<<<<< HEAD
         // Listen to the very last one
         const q = query(
             collection(db, "notifications"),
@@ -29,6 +36,25 @@ export const TvAlertListener: React.FC = () => {
                 if (change.type === "added") {
                     const data = change.doc.data();
                     const newAlert = { id: change.doc.id, ...data } as Notification;
+=======
+        const channel = supabase
+            .channel('public:notifications')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'notifications' },
+                (payload) => {
+                    const newAlert = payload.new as Notification;
+
+                    const settings = getAlertSettings();
+                    if (!settings.enabled) return; // Alerts disabled globally
+
+                    triggerToast(newAlert);
+
+                    // Trigger Text-to-Speech if enabled
+                    if (settings.ttsEnabled) {
+                        speakMessage(`${newAlert.title}. ${newAlert.message}`);
+                    }
+>>>>>>> de01a355d705382517a3ff85f5867085619f0cca
 
                     // Simple dedupe for session
                     if (processedIds.current.has(newAlert.id)) return;
