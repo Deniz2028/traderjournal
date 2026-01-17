@@ -2,9 +2,7 @@
 // src/renderer/src/pages/MorningAnalysisPage.tsx
 import React, { useEffect, useState } from "react";
 import { useRoute } from "wouter";
-import { db } from "../lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
-import { useAuth } from "../context/AuthContext";
+
 
 import {
     fetchMorningForDate,
@@ -187,35 +185,7 @@ const MorningAnalysisPage: React.FC = () => {
         alert("Morning analysis saved.");
     };
 
-    const handleShare = async (inst: MorningMtfInstrumentSnapshot, activeTf: TF, activeState: any) => {
-        if (!user) {
-            alert("Please login to War Room first!");
-            return;
-        }
 
-        const notes = activeState.notes || `Daily Bias: ${inst.dailyBias}`;
-
-        // Fire and forget (Optimistic update)
-        addDoc(collection(db, 'shared_analyses'), {
-            user_id: user.uid,
-            username: user.displayName || "Unknown",
-            pair: inst.symbol || "Unknown",
-            timeframe: activeTf,
-            bias: activeState.bias === "neutral" ? (inst.dailyBias === "neutral" ? "Neutral" : biasLabel[inst.dailyBias]) : biasLabel[activeState.bias],
-            notes: notes,
-            image_url: activeState.chartUrl, // We trust this is a valid URL or null
-            instrument_data: inst, // Send full snapshot
-            likes: 0,
-            created_at: new Date().toISOString()
-        }).then(() => {
-            // Success (server ack), usually silent or small toast
-            console.log("Analysis synced to server.");
-        }).catch((error) => {
-            alert("Failed to share (background): " + error.message);
-        });
-
-        alert("Shared to War Room! ⚔️");
-    };
 
     return (
         <div>
@@ -391,9 +361,7 @@ const MorningAnalysisPage: React.FC = () => {
                                     {!isViewMode && (
                                         <button onClick={handleDelete} style={{ height: 28, width: 28, borderRadius: 6, border: "none", background: "#FEF2F2", color: "#B91C1C", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", alignSelf: "end" }} title="Remove Instrument">×</button>
                                     )}
-                                    {isViewMode && inst.symbol && (
-                                        <button onClick={() => handleShare(inst, activeTf, active)} style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-card)', cursor: 'pointer', marginTop: 4 }}>🚀 Share</button>
-                                    )}
+
                                 </div>
                             </div>
 

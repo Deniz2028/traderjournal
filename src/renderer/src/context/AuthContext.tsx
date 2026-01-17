@@ -1,12 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+
+// Mock User interface to match Firebase User roughly
+interface User {
+    uid: string;
+    email: string | null;
+    displayName: string | null;
+}
 
 interface AuthContextType {
     user: User | null;
     signOut: () => Promise<void>;
     loading: boolean;
 }
+
+const OFFLINE_USER: User = {
+    uid: "offline-local-user",
+    email: "trader@local",
+    displayName: "Trader"
+};
 
 const AuthContext = createContext<AuthContextType>({
     user: null,
@@ -19,24 +30,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        console.log("AuthContext: Initializing Firebase Auth listener...");
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-            console.log("AuthContext: User state changed:", currentUser?.email ?? "No User");
-            setUser(currentUser);
-            setLoading(false);
-        });
-
-        return () => {
-            unsubscribe();
-        };
+        // Instant "login" for offline mode
+        console.log("AuthContext: Offline mode active. Logging in automatically.");
+        setUser(OFFLINE_USER);
+        setLoading(false);
     }, []);
 
     const signOut = async () => {
-        try {
-            await firebaseSignOut(auth);
-        } catch (error) {
-            console.error("Error signing out:", error);
-        }
+        // No-op in offline mode, or maybe just log log content
+        console.log("Sign out requested (Offline mode ignores this)");
+        // Ideally we don't even show sign out button
     };
 
     return (
